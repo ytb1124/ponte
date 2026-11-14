@@ -10,15 +10,21 @@
 </head>
 <body>
 <nav id="nav">
-    <div class="brand"><img src="logo.svg" alt="" style="width:20px;height:20px;vertical-align:-4px;margin-right:6px"><span class="dot" id="conn-dot"></span> Ponte</div>
-    <button class="tab active" data-page="dashboard">Overview</button>
-    <button class="tab" data-page="streams">Streams</button>
-    <button class="tab" data-page="player">Player</button>
-    <button class="tab" data-page="settings">Setup &amp; PTP</button>
+    <div class="brand"><img src="logo.svg" alt=""><span class="dot" id="conn-dot"></span>Ponte</div>
+    <div class="navstat" id="nav-stat" title="PTP clock state · device sample rate">
+        <span class="ns-ptp" id="nav-ptp">PTP</span><span class="ns-rate">48kHz</span>
+    </div>
+    <div class="tabs">
+        <button class="tab active" data-page="dashboard">Overview</button>
+        <button class="tab" data-page="patch">Patch</button>
+        <button class="tab" data-page="player">Player</button>
+        <button class="tab" data-page="setup">Setup</button>
+    </div>
+    <div class="navclock" id="nav-clock">--:--:--</div>
 </nav>
 
 <main>
-<!-- ================= DASHBOARD ================= -->
+<!-- ================= OVERVIEW ================= -->
 <section id="page-dashboard" class="page active">
     <div class="grid">
         <div class="card">
@@ -37,7 +43,7 @@
         </div>
         <div class="card wide">
             <h2>Streams</h2>
-            <div id="d-streams" style="text-transform:none"></div>
+            <div id="d-streams"></div>
         </div>
         <div class="card wide">
             <h2>Receiver <span class="hint" data-tip="Network → apps: what arrives on device channels 1–64"></span></h2>
@@ -50,29 +56,149 @@
     </div>
 </section>
 
-<!-- ================= STREAMS (tiles) ================= -->
-<section id="page-streams" class="page">
-    <div class="sec-head">
-        <h1>Senders</h1><span class="count" id="st-tx-count">0</span>
-        <span class="hint" data-tip="Apps → network. Pick how many channels a sender carries and where they start on the 64-channel device."></span>
+<!-- ================= PATCH ================= -->
+<section id="page-patch" class="page">
+    <div class="patch-top">
+        <div class="panel pv-select">
+            <div class="panel-title">Select Patch View</div>
+            <div class="seg">
+                <button class="sbtn active" data-view="input">Input</button>
+                <button class="sbtn" data-view="output">Output</button>
+            </div>
+        </div>
+        <div class="panel pv-strip" id="pv-streams"></div>
     </div>
-    <div id="st-tx" class="tiles"></div>
-    <div class="sec-head">
-        <h1>Receivers</h1><span class="count" id="st-rx-count">0</span>
-        <span class="hint" data-tip="Network → apps. Set the maximum channels a receiver accepts and its first device channel."></span>
+    <div class="patch-body">
+        <div class="sidenav">
+            <button class="sbtn tall active" data-bank="0">Ch<br>1–32</button>
+            <button class="sbtn tall" data-bank="1">Ch<br>33–64</button>
+        </div>
+        <div class="panel patch-panel">
+            <div class="patch-head">
+                <div>
+                    <div class="patch-title" id="patch-title">Input</div>
+                    <div class="patch-subtitle" id="patch-subtitle">From network stream to Ponte channel</div>
+                </div>
+                <div class="patch-legend"><span class="cell-demo set"></span> patched
+                    <span class="cell-demo live"></span> patched &amp; running
+                    <span class="hint" data-tip="Click a cell to send that stream channel to that Ponte channel. A stream channel always goes to exactly one Ponte channel; clicking moves it."></span></div>
+            </div>
+            <div class="patch-scroll" id="patch-grid"></div>
+        </div>
     </div>
-    <div id="st-rx" class="tiles"></div>
+</section>
+
+<!-- ================= SETUP ================= -->
+<section id="page-setup" class="page">
+    <div class="setup">
+        <div class="sidenav">
+            <button class="sbtn tall active" data-sub="inventory">System<br>Inventory</button>
+            <button class="sbtn tall" data-sub="network">Network<br>&amp; PTP</button>
+        </div>
+        <div class="setup-main">
+            <div class="panel sysbar">
+                <div class="sysf grow"><label>System</label><input id="set-label" spellcheck="false"></div>
+                <div class="sysf"><label>Apply</label>
+                    <button class="sbtn" id="set-save" title="Interface, registry and port changes restart the service automatically">Save</button></div>
+                <div class="sysf grow"><label>Network Port</label><select id="set-if1"></select></div>
+                <div class="sysf"><label>Link</label><div class="statbox" id="hdr-link">–</div></div>
+                <div class="sysf"><label>Address</label><div class="statbox" id="hdr-addr">–</div></div>
+                <div class="sysf"><label>Sample Rate</label><div class="statbox">48000 Hz</div></div>
+                <div class="sysf"><label>Clock</label><div class="statbox" id="hdr-clock">–</div></div>
+                <div class="sysinfo" id="set-save-info"></div>
+            </div>
+
+            <!-- system inventory -->
+            <div class="panel subpage active" id="sub-inventory">
+                <div class="inventory">
+                    <div class="inv-col c-tx">
+                        <h3 class="inv-h blue">Senders <span>Ponte → Network</span></h3>
+                        <div id="st-tx" class="slots"></div>
+                    </div>
+                    <div class="inv-col c-rx">
+                        <h3 class="inv-h green">Receivers <span>Network → Ponte</span></h3>
+                        <div id="st-rx" class="slots"></div>
+                    </div>
+                    <div class="inv-col c-sap">
+                        <h3 class="inv-h orange">Network <span>SAP</span>
+                            <span class="hint" data-tip="Streams announced via SAP: Dante AES67 flows, RAVENNA, other AES67 devices and Ponte itself. Connect puts one on a free receiver."></span></h3>
+                        <div id="inv-sap" class="slots one"></div>
+                    </div>
+                    <div class="inv-col c-clk">
+                        <h3 class="inv-h yellow">Clock</h3>
+                        <div id="inv-clock" class="slots one"></div>
+                    </div>
+                    <div class="inv-col c-route">
+                        <h3 class="inv-h white">Routing View</h3>
+                        <div class="routing">
+                            <table>
+                                <thead><tr><th>Source</th><th>Destination</th><th>Ch</th><th>Errors</th></tr></thead>
+                                <tbody id="routing"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- network & ptp -->
+            <div class="panel subpage" id="sub-network">
+                <div class="grid two">
+                    <div class="card">
+                        <h2>Device</h2>
+                        <table class="kv">
+                            <tr><td>Interface 2 <span class="sub">blue</span></td><td><select id="set-if2"></select></td></tr>
+                            <tr><td>Playout delay</td><td><input id="set-delay" size="4"> ms</td></tr>
+                        </table>
+                        <div id="net-ifs" class="sub"></div>
+                    </div>
+                    <div class="card">
+                        <h2>NMOS <span class="pill" id="set-nmos-pill">–</span></h2>
+                        <table class="kv">
+                            <tr><td>Registry <span class="hint" data-tip="Leave the host empty for automatic discovery (unicast DNS-SD). Example: http · registrar1.office.int · 8010"></span></td><td>
+                                <select id="set-reg-scheme"><option value="http">http</option><option value="https">https</option></select>
+                                <input id="set-reg-host" size="15" placeholder="registrar1.office.int">
+                                <input id="set-reg-port" size="5" placeholder="8010">
+                            </td></tr>
+                            <tr><td>Node API port</td><td><input id="set-nmos-port" size="6"></td></tr>
+                        </table>
+                        <div class="sub" id="set-nmos-status">–</div>
+                        <div class="sub" id="set-version">–</div>
+                    </div>
+                    <div class="card wide">
+                        <h2>PTP analyzer <span class="pill" id="ptp-state">–</span>
+                            <label class="inline right"><input type="checkbox" id="ptp-domain-auto"> Auto</label>
+                            <label class="inline">Domain <input type="number" id="ptp-domain" min="0" max="127" style="width:5.5em"></label>
+                        </h2>
+                        <div class="big small" id="ptp-time">–</div>
+                        <div class="sub">Own identity: <span id="ptp-identity">–</span> · domain <span id="ptp-active-domain">–</span> · correction <span id="ptp-offset">–</span> · path delay <span id="ptp-delay">–</span></div>
+                        <div class="sub" id="ptp-meta" style="display:none"></div>
+                        <canvas id="ptp-chart" height="64" class="ptp-chart" title="Correction history around the mean - dots: raw measurements (timestamp noise), line: servo"></canvas>
+                        <table class="masters" id="ptp-masters">
+                            <thead><tr>
+                                <th>BMCA</th><th>Source</th><th>Grandmaster</th><th>P1</th><th>Class</th><th>P2</th><th>Steps</th><th>Net</th><th>Decision</th>
+                            </tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </section>
 
 <!-- ================= RECEIVER (detail) ================= -->
 <section id="page-receiver" class="page">
-    <div class="detail-bar"><button class="btn sm" data-back>← Streams</button><span class="detail-title" id="rx-title"></span></div>
+    <div class="detail-bar"><button class="sbtn" data-back>← Setup</button><span class="detail-title" id="rx-title"></span></div>
     <div class="grid">
         <div class="card wide">
             <h2>Status <span class="pill" id="rx-overall">–</span>
-                <span class="sub" id="rx-mini" style="text-transform:none">–</span></h2>
+                <span class="sub" id="rx-mini">–</span></h2>
             <div id="rx-meters" class="bank small"></div>
             <canvas id="rx-buffer-chart" height="56"></canvas>
+        </div>
+        <div class="card wide">
+            <h2>SAP streams <span class="hint" data-tip="Streams announced via SAP (Dante AES67 flows, RAVENNA, other AES67 devices)"></span></h2>
+            <div id="rx-sap" class="sub">–</div>
         </div>
         <div class="card wide">
             <h2>NMOS senders
@@ -82,11 +208,7 @@
             <div id="rx-senders" class="sub">–</div>
         </div>
         <div class="card wide">
-            <h2>SAP streams <span class="hint" data-tip="Streams announced via SAP (Dante AES67 flows, RAVENNA, other AES67 devices)"></span></h2>
-            <div id="rx-sap" class="sub">–</div>
-        </div>
-        <div class="card wide">
-            <h2>Manual (SDP) <span class="hint" data-tip="Fallback without NMOS: paste the sender's SDP (a=group:DUP supported)"></span></h2>
+            <h2>Manual (SDP) <span class="hint" data-tip="Fallback without NMOS or SAP: paste the sender's SDP (a=group:DUP supported)"></span></h2>
             <textarea id="rx-sdp" placeholder="Paste SDP here (a=group:DUP supported)…" rows="4"></textarea>
             <div class="row">
                 <button class="btn primary" id="rx-connect">Connect</button>
@@ -99,30 +221,16 @@
     </div>
 </section>
 
-<!-- ================= PLAYER ================= -->
-<section id="page-player" class="page">
-    <div class="grid">
-        <div class="card wide">
-            <h2>Audio files <span class="hint" data-tip="WAV or MP3, decoded to 48 kHz on load. Players mix onto the device channels, so any sender covering them streams the audio."></span></h2>
-            <div class="row">
-                <input type="file" id="pl-upload" accept=".wav,.mp3">
-                <span id="pl-upload-info" class="sub"></span>
-            </div>
-        </div>
-        <div id="pl-decks" class="wide"></div>
-    </div>
-</section>
-
 <!-- ================= SENDER (detail) ================= -->
 <section id="page-sender" class="page">
-    <div class="detail-bar"><button class="btn sm" data-back>← Streams</button><span class="detail-title" id="tx-title"></span></div>
+    <div class="detail-bar"><button class="sbtn" data-back>← Setup</button><span class="detail-title" id="tx-title"></span></div>
     <div class="grid">
         <div class="card wide">
             <h2>Status <span class="pill" id="tx-state">–</span>
-                <span class="sub" id="tx-mini" style="text-transform:none">–</span></h2>
+                <span class="sub" id="tx-mini">–</span></h2>
             <div id="tx-meters" class="bank small"></div>
             <div class="row">
-                <label class="inline">Name <input id="tx-label" size="24" placeholder="label shown in NMOS and SDP"></label>
+                <label class="inline">Name <input id="tx-label" size="24" placeholder="label shown in NMOS, SAP and SDP"></label>
                 <button class="btn primary" id="tx-start">Start</button>
                 <button class="btn" id="tx-stop">Stop</button>
             </div>
@@ -138,10 +246,10 @@
             </table>
             <div class="row">
                 <button class="btn primary" id="tx-apply" title="Restarts this transmitter with the new destination">Apply</button>
-                <span class="sub" id="tx-apply-info" style="text-transform:none"></span>
+                <span class="sub" id="tx-apply-info"></span>
             </div>
         </div>
-        <div class="card wide">
+        <div class="card">
             <h2>SDP
                 <button class="btn right" id="tx-show-sdp">Show SDP</button>
                 <button class="btn" id="tx-copy-sdp" style="display:none">Copy</button>
@@ -151,55 +259,17 @@
     </div>
 </section>
 
-<!-- ================= SETTINGS ================= -->
-<section id="page-settings" class="page">
-    <div class="grid two">
-        <div class="card">
-            <h2>Device</h2>
-            <table class="kv">
-                <tr><td>Label</td><td><input id="set-label"></td></tr>
-                <tr><td>Interface 1 <span class="sub">amber</span></td><td><select id="set-if1"></select></td></tr>
-                <tr><td>Interface 2 <span class="sub">blue</span></td><td><select id="set-if2"></select></td></tr>
-                <tr><td>Playout delay</td><td><input id="set-delay" size="4"> ms</td></tr>
-            </table>
-        </div>
-        <div class="card">
-            <h2>NMOS <span class="pill" id="set-nmos-pill">–</span></h2>
-            <table class="kv">
-                <tr><td>Registry <span class="hint" data-tip="Leave the host empty for automatic discovery (unicast DNS-SD). Example: http · registrar1.office.int · 8010"></span></td><td>
-                    <select id="set-reg-scheme"><option value="http">http</option><option value="https">https</option></select>
-                    <input id="set-reg-host" size="15" placeholder="registrar1.office.int">
-                    <input id="set-reg-port" size="5" placeholder="8010">
-                </td></tr>
-                <tr><td>Node API port</td><td><input id="set-nmos-port" size="6"></td></tr>
-            </table>
-            <div class="sub" id="set-nmos-status" style="text-transform:none">–</div>
-            <div class="sub" id="set-version">–</div>
-        </div>
-        <div class="actionbar">
-            <span class="sub" id="set-save-info"></span>
-            <button class="btn primary" id="set-save" title="Interface, registry and port changes restart the service automatically">Save &amp; apply</button>
-        </div>
-    </div>
-    <div class="sec-head" style="margin-top:22px"><h1>PTP</h1><span class="hint" data-tip="IEEE 1588 slave: the device clock follows the selected grandmaster"></span></div>
+<!-- ================= PLAYER ================= -->
+<section id="page-player" class="page">
     <div class="grid">
         <div class="card wide">
-            <h2>Analyzer <span class="pill" id="ptp-state">–</span>
-                <label class="inline right"><input type="checkbox" id="ptp-domain-auto"> Auto</label>
-                <label class="inline right">Domain <input type="number" id="ptp-domain" min="0" max="127" style="width:5.5em"></label>
-            </h2>
-            <div class="big small" id="ptp-time">–</div>
-            <div class="sub">Own identity: <span id="ptp-identity">–</span> · domain <span id="ptp-active-domain">–</span> · correction <span id="ptp-offset">–</span> · path delay <span id="ptp-delay">–</span></div>
-            <div class="sub" id="ptp-meta" style="display:none"></div>
-            <canvas id="ptp-chart" height="64" class="ptp-chart" title="Correction history around the mean - dots: raw measurements (timestamp noise), line: servo"></canvas>
-            <table class="masters" id="ptp-masters">
-                <thead><tr>
-                    <th>BMCA</th><th>Source</th><th>Grandmaster</th><th>P1</th><th>Class</th><th>P2</th><th>Steps</th><th>Net</th><th>Decision</th>
-                </tr></thead>
-                <tbody></tbody>
-            </table>
+            <h2>Audio files <span class="hint" data-tip="WAV or MP3, decoded to 48 kHz on load. Players mix onto the device channels, so any sender covering them streams the audio."></span></h2>
+            <div class="row">
+                <input type="file" id="pl-upload" accept=".wav,.mp3">
+                <span id="pl-upload-info" class="sub"></span>
+            </div>
         </div>
-    
+        <div id="pl-decks" class="wide"></div>
     </div>
 </section>
 </main>

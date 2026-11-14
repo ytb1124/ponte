@@ -9,21 +9,39 @@ let lastCurSender = null;
 const sndOpen = new Set();      //expanded device groups, kept across refreshes
 
 /* ---------- navigation ---------- */
-function showPage(name) {
-    if (name === "ptp" || name === "matrix") name = name === "ptp" ? "settings" : "streams";
+/* old page names from bookmarks: streams/settings/ptp/matrix */
+const PAGE_ALIAS = {streams: ["setup", "inventory"], settings: ["setup", "network"], ptp: ["setup", "network"],
+                    network: ["setup", "network"], inventory: ["setup", "inventory"], matrix: ["patch"]};
+function showPage(name, sub) {
+    if (PAGE_ALIAS[name]) [name, sub] = [PAGE_ALIAS[name][0], sub || PAGE_ALIAS[name][1]];
     if (!$("page-" + name)) return;
-    const tabOf = {receiver: "streams", sender: "streams"}[name] || name;
+    const tabOf = {receiver: "setup", sender: "setup"}[name] || name;
     document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.page === tabOf));
     document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
     $("page-" + name).classList.add("active");
-    history.replaceState(null, "", "#" + name);
-    if (name === "settings" || name === "dashboard") loadNetwork();
+    if (name === "setup") showSub(sub || currentSub);
+    history.replaceState(null, "", "#" + (name === "setup" && currentSub === "network" ? "network" : name));
+    if (name === "setup" || name === "dashboard") loadNetwork();
     if (name === "receiver") loadSenders();
     if (name === "player") loadPlayerFiles();
+    if (name === "patch") renderPatch(true);
+}
+let currentSub = "inventory";
+function showSub(sub) {
+    if (!$("sub-" + sub)) sub = "inventory";
+    currentSub = sub;
+    document.querySelectorAll("[data-sub]").forEach(b => b.classList.toggle("active", b.dataset.sub === sub));
+    document.querySelectorAll(".subpage").forEach(p => p.classList.toggle("active", p.id === "sub-" + sub));
 }
 document.querySelectorAll(".tab").forEach(tab => { tab.onclick = () => showPage(tab.dataset.page); });
-if (location.hash.length > 1) showPage(location.hash.slice(1));
+document.querySelectorAll("[data-sub]").forEach(btn => { btn.onclick = () => showPage("setup", btn.dataset.sub); });
 window.addEventListener("hashchange", () => { if (location.hash.length > 1) showPage(location.hash.slice(1)); });
+
+/* clock in the top bar */
+setInterval(() => {
+    const d = new Date(), p = n => String(n).padStart(2, "0");
+    $("nav-clock").textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}, 500);
 
 /* ---------- helpers ---------- */
 const STATE_NAMES = ["Inactive", "Healthy", "Partially healthy", "Unhealthy"];
@@ -136,6 +154,9 @@ function render() {
     renderMatrixPage();
     renderPlayers();
     renderStreams();
+    renderClock();
+    renderRouting();
+    renderPatch();
 
     /* dashboard */
     pill($("d-ptp-state"), ptp.synced ? "Locked" : (ptp.masters && ptp.masters.length ? "Syncing…" : "No master"),
@@ -351,7 +372,7 @@ function drawChart(history) {
     const values = history.map(p => p[1]);
     const max = Math.max(1000, ...values.map(Math.abs));
     const Y = v => h / 2 - (v / max) * (h / 2 - 6);
-    ctx.strokeStyle = "#e3e6eb";
+    ctx.strokeStyle = "#3a3a3c";
     ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
 
     /* raw measurements: dim scatter - this is timestamp noise, not the clock */
@@ -477,10 +498,69 @@ setInterval(() => {
 
 /* ---------- sap discovered streams (status.sap.discovered) ---------- */
 let sapShown = "";
+const sapFormat = sdp => (/a=rtpmap:\d+ (L\d+\/\d+(?:\/\d+)?)/.exec(sdp) || [])[1] || "";
+const sapChannels = sdp => parseInt((/a=rtpmap:\d+ L\d+\/\d+\/(\d+)/.exec(sdp) || [])[1] || "2", 10);
+const sapGroup = sdp => {
+    const m = /c=IN IP4 ([\d.]+)/.exec(sdp), p = /m=audio (\d+)/.exec(sdp);
+    return m ? m[1] + (p ? ":" + p[1] : "") : "";
+};
+
+/* inventory: connect a sap stream to the first idle receiver, adding one if none is free */
+async function connectSapToFreeReceiver(s) {
+    let rx = (status.receivers || []).find(r => !r.running);
+    let index = rx ? rx.index : null;
+    if (index === null) {
+        const list = status.receivers || [];
+        const channels = Math.min(8, sapChannels(s.sdp));
+        const r = await api("/api/action/stream-add", "POST",
+            {type: "receiver", channels, channel_offset: firstFreeStart(list, channels)}).catch(e => ({error: String(e)}));
+        if (r.error || r.index === undefined) { alert(r.error || "could not add a receiver"); return; }
+        index = r.index;
+    }
+    const result = await api("/api/action/receiver-connect", "POST", {sap_key: s.key, stream: index})
+        .catch(() => ({error: "request failed"}));
+    if (result.error) alert(result.error);
+}
+
+let invSapShown = "";
+function renderInvSap(list, sig) {
+    const host = $("inv-sap");
+    if (!host) return;
+    /* which receiver currently plays which announced session (by name) */
+    const playing = name => (status.receivers || []).find(r => r.running && r.session_name === name);
+    const sigFull = sig + "#" + (status.receivers || []).map(r => r.running + r.session_name).join(",");
+    if (sigFull === invSapShown) return;
+    invSapShown = sigFull;
+    if (!list.length) {
+        host.innerHTML = `<div class="tile sap small"><div class="tile-head"><span class="tname">No announcements</span></div>
+            <div class="tile-body"><div class="t-line dim">Nothing seen on 239.255.255.255:9875 yet</div></div></div>`;
+        return;
+    }
+    host.innerHTML = list.map((s, i) => {
+        const rx = playing(s.name);
+        return `<div class="tile sap small">
+            <div class="tile-head"><span class="tnum">${i + 1}.</span><span class="tname" title="${esc(s.name)}">${esc(s.name) || "(unnamed)"}</span></div>
+            <div class="tile-body">
+                <div class="t-state ${rx ? "ok" : "warn"}">${rx ? "On RX " + (rx.index + 1) : "Announced"}</div>
+                <div class="t-line">${esc(sapFormat(s.sdp))}</div>
+                <div class="t-line dim">${esc(sapGroup(s.sdp))}</div>
+                <div class="t-line dim">from ${esc(s.origin)}</div>
+            </div>
+            <div class="t-actions">${rx
+                ? `<button class="btn" data-sapoff="${rx.index}">Disconnect</button>`
+                : `<button class="btn primary" data-sapon="${i}">Connect</button>`}</div>
+        </div>`;
+    }).join("");
+    host.querySelectorAll("[data-sapon]").forEach(b => b.onclick = () => connectSapToFreeReceiver(list[+b.dataset.sapon]));
+    host.querySelectorAll("[data-sapoff]").forEach(b => b.onclick = () =>
+        api("/api/action/receiver-disconnect", "POST", {stream: +b.dataset.sapoff}).catch(alert));
+}
+
 function renderSap() {
     const list = ((status.sap || {}).discovered || []).slice().sort((a, b) => a.name.localeCompare(b.name));
     /* the status arrives often - only rebuild when the set of streams changed */
     const sig = list.map(s => s.key + "|" + s.version).join(",");
+    renderInvSap(list, sig);
     if (sig === sapShown) return;
     sapShown = sig;
     if (!list.length) { $("rx-sap").textContent = "no SAP announcements seen"; return; }
@@ -768,9 +848,20 @@ async function loadNetwork() {
             </div>
         </div>`).join("") || `<div class="sub">no interfaces configured</div>`;
     hosts.forEach(el => { if (el.dataset.html !== html) { el.dataset.html = html; el.innerHTML = html; } });
+
+    /* setup header: the primary interface, like a console's network port box */
+    const pri = ifs.find(f => f.role === "amber") || ifs[0];
+    const link = $("hdr-link"), addr = $("hdr-addr");
+    if (link) {
+        link.textContent = pri ? (pri.link ? "Valid" : "Invalid") : "–";
+        link.className = "statbox " + (pri ? (pri.link ? "ok" : "bad") : "");
+        addr.textContent = (pri && pri.address) || "no address";
+    }
 }
-//link state changes without a page switch (cable pulled, dhcp) - keep the overview current
-setInterval(() => { if ($("page-dashboard").classList.contains("active")) loadNetwork(); }, 5000);
+//link state changes without a page switch (cable pulled, dhcp) - keep overview and setup current
+setInterval(() => {
+    if ($("page-dashboard").classList.contains("active") || $("page-setup").classList.contains("active")) loadNetwork();
+}, 5000);
 
 /* ---------- settings ---------- */
 $("set-save").onclick = async () => {
@@ -1003,31 +1094,39 @@ async function setStreamLabel(kind, s, label) {
 function tileHtml(kind, s) {
     const chOpts = [1, 2, 3, 4, 5, 6, 7, 8].map(n => `<option value="${n}">${n}</option>`).join("");
     const actions = kind.type === "sender"
-        ? `<button class="btn sm go t-toggle">Start</button>`
-        : `<button class="btn sm primary t-connect">Connect…</button>
-           <button class="btn sm t-disc">Disconnect</button>`;
+        ? `<button class="btn go t-toggle">Start</button>`
+        : `<button class="btn primary t-connect">Connect…</button>
+           <button class="btn t-disc">Disconnect</button>`;
     return `
         <div class="tile ${kind.type}" data-tile="${s.index}">
             <div class="tile-head">
-                <span class="tag ${kind.tag.toLowerCase()}">${kind.tag} ${s.index + 1}</span>
-                <input class="t-label" placeholder="Label" spellcheck="false">
-                <span class="t-state"><i class="led"></i><span class="t-state-text"></span></span>
+                <span class="tnum">${s.index + 1}.</span>
+                <input class="t-label" placeholder="${kind.tag} ${s.index + 1}" spellcheck="false" title="Click to rename">
+                <span class="tag">${kind.tag}</span>
             </div>
-            <div class="t-fmt"></div>
-            <div class="t-addr"></div>
-            <div class="t-route">
-                <label>${kind.type === "sender" ? "Channels" : "Max channels"}
-                    <select class="t-ch">${chOpts}</select></label>
-                <label>Start ch <input class="t-start" type="number" min="1" max="64"></label>
-                <span class="t-range"></span>
+            <div class="tile-body">
+                <div class="t-state"><span class="t-state-text"></span></div>
+                <div class="t-fmt"></div>
+                <div class="t-addr"></div>
+                <div class="t-route">
+                    <label title="${kind.type === "sender" ? "Channels" : "Max channels"}">Ch
+                        <select class="t-ch">${chOpts}</select></label>
+                    <label>from <input class="t-start" type="number" min="1" max="64"></label>
+                </div>
+                <div class="t-range t-line"></div>
+                <div class="bank small t-meters"></div>
             </div>
-            <div class="bank small t-meters"></div>
             <div class="t-actions">
+                <button class="btn t-details" title="Details">⚙</button>
                 ${actions}
-                <button class="btn sm t-details">Details</button>
-                <button class="btn sm t-del right" title="Remove this ${kind.type}">✕</button>
+                <button class="btn t-del" title="Remove this ${kind.type}">✕</button>
             </div>
         </div>`;
+}
+
+function emptySlotHtml(kind, n) {
+    return `<div class="tile ${kind.type} empty" data-add="${kind.type}" title="Add a ${kind.type}">
+        <div class="tile-head"><span class="tnum">${n}.</span><span class="t-empty">+ Add</span></div></div>`;
 }
 
 function wireTiles(kind, host) {
@@ -1069,11 +1168,11 @@ function wireTiles(kind, host) {
             await api("/api/action/stream-remove", "POST", {type: kind.type, index}).catch(alert);
         };
     });
-    host.querySelector("[data-add]").onclick = async () => {
+    host.querySelectorAll("[data-add]").forEach(slot => slot.onclick = async () => {
         const list = status[kind.key] || [];
         await api("/api/action/stream-add", "POST",
                   {type: kind.type, channels: 2, channel_offset: firstFreeStart(list, 2)}).catch(alert);
-    };
+    });
 }
 
 function updateTile(kind, tile, s) {
@@ -1085,12 +1184,13 @@ function updateTile(kind, tile, s) {
     setIfIdle(tile.querySelector(".t-ch"), map.length || 1);
     setIfIdle(tile.querySelector(".t-start"), (map[0] ?? 0) + 1);
     tile.querySelector(".t-range").textContent = !map.length ? "" :
-        isContiguous(map) ? `→ device ch ${map[0] + 1}–${map[map.length - 1] + 1}` : "→ custom map";
+        (kind.type === "sender" ? "Ponte out " : "Ponte in ") +
+        (isContiguous(map) ? `${map[0] + 1}–${map[map.length - 1] + 1}` : "custom patch");
 
     let cls = "off", text, fmt, addr;
     const legs = (s.legs || []).filter(l => l.multicast).map(l => `${l.multicast}:${l.port}`).join(" · ");
     if (kind.type === "sender") {
-        text = s.running ? (s.waiting_for_ptp ? "Waiting for PTP" : "On air") : "Stopped";
+        text = s.running ? (s.waiting_for_ptp ? "Waiting for PTP" : "On air") : "Offline";
         cls = s.running ? (s.waiting_for_ptp ? "warn" : "ok") : "off";
         fmt = `L${s.bits || cfg.bits || 24} / 48 kHz / ${map.length} ch`;
         addr = legs || `${cfg.multicast_primary || "–"}:${cfg.port || 5004}`;
@@ -1098,7 +1198,7 @@ function updateTile(kind, tile, s) {
         toggle.textContent = s.running ? "Stop" : "Start";
         toggle.classList.toggle("go", !s.running);
     } else {
-        text = s.receiving ? "Receiving" : (s.running ? "No signal" : "Idle");
+        text = s.receiving ? "Receiving" : (s.running ? "No signal" : "Offline");
         cls = s.receiving ? "ok" : (s.running ? "warn" : "off");
         fmt = s.running ? `L${s.bits || 24} / 48 kHz / ${s.channels || "?"} ch` : "not connected";
         addr = s.running ? [s.session_name, legs].filter(Boolean).join(" · ") : "";
@@ -1123,8 +1223,12 @@ function renderStreams() {
         const fp = JSON.stringify(list.map(s => s.id));
         if (host.dataset.fp !== fp) {
             host.dataset.fp = fp;
+            /* fixed slot raster like a console's device inventory: at least
+               8 slots, always one empty slot to add into, even count */
+            let slots = Math.max(8, list.length + 1);
+            slots += slots % 2;
             host.innerHTML = list.map(s => tileHtml(kind, s)).join("") +
-                `<div class="tile add" data-add="${kind.type}"><span class="plus">+</span>Add ${kind.type}</div>`;
+                Array.from({length: slots - list.length}, (_, i) => emptySlotHtml(kind, list.length + i + 1)).join("");
             wireTiles(kind, host);
         }
         list.forEach(s => updateTile(kind, host.querySelector(`[data-tile="${s.index}"]`), s));
@@ -1154,6 +1258,167 @@ function updateTileMeters(m) {
 
 document.querySelectorAll("[data-back]").forEach(btn => { btn.onclick = () => showPage("streams"); });
 
+const rangeText = map => !map.length ? "–" :
+    isContiguous(map) ? (map.length === 1 ? `${map[0] + 1}` : `${map[0] + 1}–${map[map.length - 1] + 1}`)
+                      : map.map(c => c + 1).join(",");
+const streamAddr = s => (s.legs || []).filter(l => l.multicast).map(l => `${l.multicast}:${l.port}`)[0] || "";
+
+/* ---------- clock: top bar, setup header, inventory column ---------- */
+function renderClock() {
+    const ptp = status.ptp || {};
+    const masters = ptp.masters || [];
+    const cls = ptp.synced ? "ok" : (masters.length ? "warn" : "bad");
+    const nav = $("nav-ptp");
+    nav.textContent = ptp.synced ? "PTP lock" : (masters.length ? "PTP sync…" : "No PTP");
+    nav.className = "ns-ptp " + cls;
+    const hdr = $("hdr-clock");
+    hdr.textContent = ptp.synced ? "PTP SLAVE" : (masters.length ? "SYNCING" : "NO MASTER");
+    hdr.className = "statbox " + cls;
+
+    const host = $("inv-clock");
+    if (!host || !host.offsetParent) return;
+    const gm = masters.find(m => m.selected);
+    let html = `<div class="tile clock small">
+        <div class="tile-head"><span class="tname">PTP · domain ${ptp.domain ?? "–"}</span></div>
+        <div class="tile-body">
+            <div class="t-state ${cls}">${ptp.synced ? "Locked" : (masters.length ? "Syncing" : "No master")}</div>
+            <div class="t-line" title="Grandmaster">${esc(gm ? gm.grandmaster : "no grandmaster")}</div>
+            <div class="t-line dim">corr ${ptp.synced ? fmtNs(ptp.correction_ns) : "–"} · delay ${fmtNs(ptp.mean_path_delay_ns)}</div>
+            <div class="t-line dim">slave-only · 48 kHz</div>
+        </div></div>`;
+    html += masters.map((m, i) => `<div class="tile clock small">
+        <div class="tile-head"><span class="tnum">${i + 1}.</span><span class="tname" title="${esc(m.grandmaster)}">${esc(m.grandmaster)}</span></div>
+        <div class="tile-body">
+            <div class="t-state ${m.selected ? "ok" : "off"}">${m.selected ? "Leader" : "Candidate"}</div>
+            <div class="t-line dim">${esc(m.address)}</div>
+            <div class="t-line dim">P1 ${m.priority1} · class ${m.clock_class} · steps ${m.steps_removed}</div>
+        </div></div>`).join("");
+    if (host.dataset.html !== html) { host.dataset.html = html; host.innerHTML = html; }
+}
+
+/* ---------- routing view: active routes like a console's routing table ---------- */
+function renderRouting() {
+    const body = $("routing");
+    if (!body) return;
+    const rows = [];
+    (status.senders || []).filter(s => s.running).forEach(s => {
+        const label = streamCfg(STREAM_KINDS[0], s.index).label;
+        rows.push(`<tr><td title="${esc(label)}">Ponte out ${rangeText(s.channel_map || [])}</td>
+            <td>${esc(streamAddr(s) || "–")}</td><td>${(s.channel_map || []).length}</td>
+            <td class="${s.waiting_for_ptp ? "err" : "ok"}">${s.waiting_for_ptp ? "PTP" : "0"}</td></tr>`);
+    });
+    (status.receivers || []).filter(r => r.running).forEach(r => {
+        const lost = (r.legs || []).reduce((a, l) => a + (l.lost || 0), 0) + (r.concealed || 0);
+        const src = r.session_name || streamAddr(r) || "–";
+        rows.push(`<tr><td title="${esc(src)}">${esc(src)}</td>
+            <td>Ponte in ${rangeText(r.channel_map || [])}</td><td>${r.channels || (r.channel_map || []).length}</td>
+            <td class="${!r.receiving || lost ? "err" : "ok"}">${r.receiving ? lost : "no signal"}</td></tr>`);
+    });
+    const html = rows.join("") || `<tr class="none"><td colspan="4">No active routes</td></tr>`;
+    if (body.dataset.html !== html) { body.dataset.html = html; body.innerHTML = html; }
+}
+
+/* ---------- patch matrix ---------- */
+let patchView = "input", patchBank = 0;
+document.querySelectorAll("[data-view]").forEach(b => b.onclick = () => {
+    patchView = b.dataset.view;
+    document.querySelectorAll("[data-view]").forEach(x => x.classList.toggle("active", x === b));
+    renderPatch(true);
+});
+document.querySelectorAll("[data-bank]").forEach(b => b.onclick = () => {
+    patchBank = +b.dataset.bank;
+    document.querySelectorAll("[data-bank]").forEach(x => x.classList.toggle("active", x === b));
+    renderPatch(true);
+});
+
+function renderPatch(force) {
+    const grid = $("patch-grid");
+    if (!grid || (!force && !$("page-patch").classList.contains("active"))) return;
+    const input = patchView === "input";
+    const kind = input ? STREAM_KINDS[1] : STREAM_KINDS[0];
+    const list = status[kind.key] || [];
+    $("patch-title").textContent = input ? "Input" : "Output";
+    $("patch-subtitle").textContent = input ? "From network stream to Ponte input channel (what apps record)"
+                                            : "From Ponte output channel (what apps play) to network stream";
+
+    const fp = JSON.stringify([patchView, patchBank, list.map(s =>
+        [s.index, s.channel_map, s.running, s.receiving, s.session_name, streamAddr(s), streamCfg(kind, s.index).label])]);
+    if (!force && grid.dataset.fp === fp) return;
+    grid.dataset.fp = fp;
+
+    /* stream strip on top, like the device thumbnails */
+    $("pv-streams").innerHTML = list.map(s => {
+        const label = streamCfg(kind, s.index).label;
+        const on = input ? s.receiving : s.running;
+        return `<div class="pv-card ${input ? "rx" : "tx"}" data-jump="${s.index}" title="Jump to ${kind.tag} ${s.index + 1}">
+            <div class="h">${kind.tag} ${s.index + 1}${label ? " · " + esc(label) : ""}</div>
+            <div class="s ${on ? "ok" : ""}">${on ? "ONLINE" : "OFFLINE"}</div>
+            <div class="f">${(s.channel_map || []).length} ch</div></div>`;
+    }).join("") || `<span class="pv-empty">No ${kind.type}s yet. Add one in Setup → System Inventory.</span>`;
+
+    if (!list.length) {
+        grid.innerHTML = `<div class="patch-none">No ${kind.type}s to patch yet.</div>`;
+        return;
+    }
+
+    const first = patchBank * 32, rowsN = 32;
+    const used = new Set();
+    list.forEach(s => (s.channel_map || []).forEach(c => used.add(c)));
+
+    let h1 = "", h2 = "", h3 = "", h4 = "";
+    for (const s of list) {
+        const map = s.channel_map || [];
+        const label = streamCfg(kind, s.index).label;
+        const addr = input ? (s.session_name || streamAddr(s) || "not connected") : (streamAddr(s) || "stopped");
+        const span = Math.max(1, map.length);
+        h1 += `<th class="sname gstart" colspan="${span}" data-s="${s.index}"><span class="tagc">${kind.tag} ${s.index + 1}</span>${esc(label)}</th>`;
+        h2 += `<th class="saddr gstart" colspan="${span}" title="${esc(addr)}">${esc(addr)}</th>`;
+        h3 += `<th class="sfmt gstart" colspan="${span}">L${s.bits || 24} · ${map.length} ch · ${(input ? s.receiving : s.running) ? "online" : "offline"}</th>`;
+        h4 += map.map((_, j) => `<th class="${j ? "" : "gstart"}">${j + 1}</th>`).join("") || `<th class="gstart">–</th>`;
+    }
+    let body = "";
+    for (let ch = first; ch < first + rowsN; ch++) {
+        body += `<tr class="${used.has(ch) ? "used" : ""}"><td class="strip"></td>
+            <td class="rname">Ponte ${input ? "In" : "Out"} ${ch + 1}</td>`;
+        for (const s of list) {
+            const map = s.channel_map || [];
+            const on = input ? s.running : s.running;
+            body += map.map((dev, j) => `<td class="pc ${j ? "" : "gstart"} ${dev === ch ? "set" + (on ? " live" : "") : ""}"
+                data-s="${s.index}" data-j="${j}" data-ch="${ch}"
+                title="${kind.tag} ${s.index + 1} ch ${j + 1} ↔ Ponte ${input ? "In" : "Out"} ${ch + 1}"></td>`).join("")
+                || `<td class="pc gstart"></td>`;
+        }
+        body += "</tr>";
+    }
+    const scroll = [grid.scrollLeft, grid.scrollTop];
+    grid.innerHTML = `<table class="pgrid ${input ? "input" : "output"}"><thead>
+        <tr><th class="corner" rowspan="4" colspan="2"><div class="ct">${input ? "Input" : "Output"}</div>
+            <div class="cs">Ponte ${input ? "In" : "Out"} ${first + 1}–${first + rowsN}</div></th>${h1}</tr>
+        <tr>${h2}</tr><tr>${h3}</tr><tr>${h4}</tr></thead><tbody>${body}</tbody></table>`;
+    [grid.scrollLeft, grid.scrollTop] = scroll;
+
+    grid.querySelectorAll("td.pc[data-s]").forEach(cell => cell.onclick = async () => {
+        const s = list.find(x => x.index === +cell.dataset.s);
+        if (!s) return;
+        const j = +cell.dataset.j, ch = +cell.dataset.ch;
+        const map = (s.channel_map || []).slice();
+        if (map[j] === ch) return;
+        /* one stream channel ↔ one Ponte channel: if this Ponte channel is
+           already used by another channel of the same stream, swap them */
+        const p = map.indexOf(ch);
+        if (p >= 0) map[p] = map[j];
+        map[j] = ch;
+        cell.classList.add("set");
+        await api("/api/action/stream-map", "POST", {type: kind.type, index: s.index, channel_map: map}).catch(alert);
+    });
+    $("pv-streams").querySelectorAll("[data-jump]").forEach(card => card.onclick = () => {
+        const th = grid.querySelector(`th.sname[data-s="${card.dataset.jump}"]`);
+        const corner = grid.querySelector("th.corner");
+        if (th) grid.scrollTo({left: th.offsetLeft - (corner ? corner.offsetWidth : 0), behavior: "smooth"});
+    });
+}
+
 loadConfig();
 loadNetwork();
 connectWs();
+if (location.hash.length > 1) showPage(location.hash.slice(1));
