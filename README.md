@@ -11,7 +11,7 @@ Ponte is a fork of [AES67eleven](https://github.com/Gemini2350/aes67eleven) by
 Gemini2350. It adds SAP announce and discovery on top of it. All the audio,
 PTP and NMOS work comes from AES67eleven.
 
-**[Download for macOS](https://github.com/ytb1124/aes67eleven/releases/latest)** ·
+**[Download for macOS](https://github.com/ytb1124/ponte/releases/latest)** ·
 [Verification status](SAP_STATUS.md) ([한국어](SAP_STATUS.ko.md))
 
 > **Status:** Dante Controller lists Ponte's streams, and send/receive works
@@ -42,7 +42,7 @@ macOS blocks it the first time. Install it one of these two ways.
 **A. Finder**
 
 1. Download `Ponte-<version>.pkg` from the
-   [latest release](https://github.com/ytb1124/aes67eleven/releases/latest).
+   [latest release](https://github.com/ytb1124/ponte/releases/latest).
 2. Double-click it. macOS says it cannot verify the package. Click **Done**.
 3. Open **System Settings → Privacy & Security**, scroll down, and click
    **Open Anyway** next to the Ponte message. Enter your password.
