@@ -233,20 +233,20 @@ int main(int argc, char** argv)
             //LaunchServices-started process never gets its status item scene
             //granted (appkit retries forever, no icon). hand over to launchd -
             //the agent context works - then open the ui and bow out.
-            (void)!system("launchctl bootstrap gui/$(id -u) \"$HOME/Library/LaunchAgents/com.aes67vsc.daemon.plist\" 2>/dev/null;"
-                          " launchctl kickstart gui/$(id -u)/com.aes67vsc.daemon");
+            (void)!system("launchctl bootstrap gui/$(id -u) \"$HOME/Library/LaunchAgents/io.github.ytb1124.ponte.daemon.plist\" 2>/dev/null;"
+                          " launchctl kickstart gui/$(id -u)/io.github.ytb1124.ponte.daemon");
             (void)!system("(sleep 2; open http://localhost:8180) >/dev/null 2>&1 &");
             return 0;
         }
 #endif
     }
 
-    auto sSupportDir = HomePath("/Library/Application Support/aes67-vsc");
+    auto sSupportDir = HomePath("/Library/Application Support/Ponte");
     mkdir(sSupportDir.c_str(), 0755);
     std::string sConfig = argc > 1 ? argv[1] : sSupportDir + "/config.json";
     Config::Get().Load(sConfig);
     MigrateConfig();
-    LOG_INFO("main") << "aes67-vsc-daemon " << APP_VERSION << " config " << sConfig;
+    LOG_INFO("main") << "ponte-daemon " << APP_VERSION << " config " << sConfig;
 
     auto sFilesDir = Config::Get().GetValue<std::string>("web.audio_files_path", "");
     if(sFilesDir.empty()) { sFilesDir = sSupportDir + "/audio-files"; }

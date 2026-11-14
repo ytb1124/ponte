@@ -257,7 +257,7 @@ namespace
         auto sInstance = pan::Config::Get().GetValue<std::string>("device.uuid_seed", "");
         auto sFunction = pan::Config::Get().GetValue<std::string>("device.asset_function", "AES67 Virtual Soundcard");
         return {{"urn:x-nmos:tag:asset:manufacturer", {"Gemini2350"}},
-                {"urn:x-nmos:tag:asset:product", {"AES67eleven"}},
+                {"urn:x-nmos:tag:asset:product", {"Ponte"}},
                 {"urn:x-nmos:tag:asset:instance-id", {sInstance}},
                 {"urn:x-nmos:tag:asset:function", {sFunction}}};
     }
@@ -277,7 +277,7 @@ namespace
 json NmosNode::BuildSelf() const
 {
     auto sLabel = Config::Get().GetValue<std::string>("device.label", "");
-    if(sLabel.empty()) { sLabel = "AES67eleven"; }
+    if(sLabel.empty()) { sLabel = "Ponte"; }
     json js;
     js["id"] = m_sNodeId;
     js["version"] = Version();
@@ -330,7 +330,7 @@ json NmosNode::BuildDevice() const
     js["version"] = Version();
     {
         auto sDeviceLabel = Config::Get().GetValue<std::string>("device.label", "");
-        js["label"] = sDeviceLabel.empty() ? "AES67eleven" : sDeviceLabel;
+        js["label"] = sDeviceLabel.empty() ? "Ponte" : sDeviceLabel;
     }
     {
         auto sDescription = Config::Get().GetValue<std::string>("device.description", "");
@@ -359,7 +359,7 @@ json NmosNode::BuildSource(size_t n) const
     auto sLabel = jsSender.value("label", "");
     if(sLabel.empty())
     {
-        sLabel = Config::Get().GetValue<std::string>("device.label", "AES67eleven") + " " + std::to_string(n+1);
+        sLabel = Config::Get().GetValue<std::string>("device.label", "Ponte") + " " + std::to_string(n+1);
     }
     int nChannels = jsSender.value("channels", 8);
     int nOffset = jsSender.value("channel_offset", int(n)*8);
@@ -406,7 +406,7 @@ json NmosNode::BuildFlow(size_t n) const
     js["version"] = Version();
     auto sFlowLabel = jsSender.value("flow_label", "");
     js["label"] = sFlowLabel.empty() ?
-        Config::Get().GetValue<std::string>("device.label", "AES67eleven") + " flow " + std::to_string(n+1) : sFlowLabel;
+        Config::Get().GetValue<std::string>("device.label", "Ponte") + " flow " + std::to_string(n+1) : sFlowLabel;
     js["description"] = jsSender.value("flow_description", "");
     js["tags"] = jsSender.value("flow_tags", json::object());
     js["device_id"] = m_sDeviceId;
@@ -425,7 +425,7 @@ json NmosNode::BuildSender(size_t n) const
     auto sLabel = jsSender.value("label", "");
     if(sLabel.empty())
     {
-        sLabel = Config::Get().GetValue<std::string>("device.label", "AES67eleven") + " sender " + std::to_string(n+1);
+        sLabel = Config::Get().GetValue<std::string>("device.label", "Ponte") + " sender " + std::to_string(n+1);
     }
 
     json js;
@@ -459,7 +459,7 @@ json NmosNode::BuildReceiver(size_t n) const
     auto sLabel = jsReceiver.value("label", "");
     if(sLabel.empty())
     {
-        sLabel = Config::Get().GetValue<std::string>("device.label", "AES67eleven") + " receiver " + std::to_string(n+1);
+        sLabel = Config::Get().GetValue<std::string>("device.label", "Ponte") + " receiver " + std::to_string(n+1);
     }
     js["id"] = m_vReceiverIds[n];
     js["version"] = Version();

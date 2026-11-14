@@ -279,8 +279,8 @@ json Is12Server::GetProperty(int nOid, int nLevel, int nIndex)
             switch(nIndex)
             {
                 case 1: return Ok("v1.0.0");
-                case 2: return Ok({{"name", "AES67eleven"}, {"organizationId", nullptr}, {"website", nullptr}});
-                case 3: return Ok({{"name", "AES67eleven"}, {"key", "aes67eleven"}, {"revisionLevel", APP_VERSION},
+                case 2: return Ok({{"name", "Ponte"}, {"organizationId", nullptr}, {"website", nullptr}});
+                case 3: return Ok({{"name", "Ponte"}, {"key", "ponte"}, {"revisionLevel", APP_VERSION},
                                    {"brandName", nullptr}, {"uuid", nullptr}, {"description", nullptr}});
                 case 4: return Ok(m_node.NodeId());
                 case 8: return Ok({{"generic", 1}, {"deviceSpecificDetails", nullptr}});

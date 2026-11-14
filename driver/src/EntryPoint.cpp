@@ -16,9 +16,9 @@ namespace
     {
         aspl::DeviceParameters params;
         params.Name = sName;
-        params.Manufacturer = "aes67-vsc";
+        params.Manufacturer = "Ponte";
         params.DeviceUID = sUid;
-        params.ModelUID = "aes67-vsc";
+        params.ModelUID = "ponte";
         params.SampleRate = kSampleRate;
         params.ChannelCount = kChannels;
         params.EnableMixing = true;
@@ -60,8 +60,8 @@ namespace
         auto pRings = std::make_shared<SharedRings>();
 
         auto plugin = std::make_shared<aspl::Plugin>(context);
-        plugin->AddDevice(MakeDevice(context, pClock, pRings, "AES67eleven", kDeviceUidMain, false));
-        plugin->AddDevice(MakeDevice(context, pClock, pRings, "AES67 Bridge", kDeviceUidBridge, true));
+        plugin->AddDevice(MakeDevice(context, pClock, pRings, "Ponte", kDeviceUidMain, false));
+        plugin->AddDevice(MakeDevice(context, pClock, pRings, "Ponte Bridge", kDeviceUidBridge, true));
 
         return std::make_shared<aspl::Driver>(context, plugin);
     }

@@ -5,26 +5,26 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>aes67vsc-daemon</string>
+    <string>ponte-daemon</string>
     <key>CFBundleIdentifier</key>
-    <string>com.aes67vsc.daemon</string>
+    <string>io.github.ytb1124.ponte.daemon</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>AES67eleven</string>
+    <string>Ponte</string>
     <key>CFBundleDisplayName</key>
-    <string>AES67eleven</string>
+    <string>Ponte</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.2.0</string>
+    <string>0.1.0</string>
     <key>CFBundleVersion</key>
-    <string>0.2.0</string>
+    <string>0.1.0</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>LSUIElement</key>
     <true/>
     <key>NSLocalNetworkUsageDescription</key>
-    <string>AES67eleven receives PTP and AES67 multicast streams from the local media network.</string>
+    <string>Ponte receives PTP and AES67 multicast streams from the local media network.</string>
 </dict>
 </plist>

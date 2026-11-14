@@ -8,8 +8,8 @@ namespace aes67vsc
     //rx) plus a hidden bridge device the daemon drives: the driver cross-wires
     //them (app output -> bridge input, bridge output -> app input) on a shared
     //timeline, so apps see a single ordinary 64x64 soundcard
-    constexpr const char* kDeviceUidMain = "AES67VSC:Device";
-    constexpr const char* kDeviceUidBridge = "AES67VSC:Bridge";
+    constexpr const char* kDeviceUidMain = "Ponte:Device";
+    constexpr const char* kDeviceUidBridge = "Ponte:Bridge";
 
     constexpr uint32_t kSampleRate = 48000;
     constexpr uint32_t kChannels = 64;
@@ -32,7 +32,7 @@ namespace aes67vsc
     constexpr uint32_t kClockSyncSelector = 0x70747053;     //'ptpS'
 
     /** capture tap (CFData) on the main device: returns the audio apps played
-    *   onto "AES67eleven" since the last read - up to kCaptureChunkFrames
+    *   onto "Ponte" since the last read - up to kCaptureChunkFrames
     *   interleaved 64ch float frames per call, drained by the daemon at
     *   ~10-20 ms cadence. This replaces the input io proc on the bridge, so
     *   the daemon never captures "microphone" audio (no orange indicator). **/

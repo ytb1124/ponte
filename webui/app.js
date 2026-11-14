@@ -849,7 +849,7 @@ async function loadConfig() {
     }
     $("ptp-domain").value = config.ptp.domain;
     $("ptp-domain-auto").checked = config.ptp.domain_auto !== false;
-    $("set-version").textContent = "AES67eleven " + (status.version || "");
+    $("set-version").textContent = "Ponte " + (status.version || "");
 }
 
 /* ---------- player page ---------- */

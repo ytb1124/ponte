@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(aes67-vsc VERSION 0.2.0 LANGUAGES C CXX)
+project(ponte VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -75,6 +75,7 @@ add_executable(aes67vsc-daemon
 )
 target_include_directories(aes67vsc-daemon PRIVATE daemon/src)
 target_compile_options(aes67vsc-daemon PRIVATE -Wall -Wextra -Wno-unused-parameter)
+set_target_properties(aes67vsc-daemon PROPERTIES OUTPUT_NAME "ponte-daemon")
 set_source_files_properties(daemon/src/menubar.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 target_link_libraries(aes67vsc-daemon PRIVATE
     aes67-common
@@ -97,7 +98,7 @@ target_link_libraries(aes67vsc-driver PRIVATE
     "-framework CoreFoundation"
 )
 set_target_properties(aes67vsc-driver PROPERTIES
-    OUTPUT_NAME "AES67VSC"
+    OUTPUT_NAME "Ponte"
     BUNDLE TRUE
     BUNDLE_EXTENSION "driver"
     MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/driver/Info.plist.in"

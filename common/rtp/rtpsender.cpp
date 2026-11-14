@@ -272,7 +272,7 @@ SdpSession RtpSender::DescribeSession() const
 {
     std::lock_guard<std::mutex> lg(m_mutex);
     SdpSession session;
-    session.sName = m_sLabel.empty() ? "AES67eleven " + m_sSourceName : m_sLabel;
+    session.sName = m_sLabel.empty() ? "Ponte " + m_sSourceName : m_sLabel;
     session.nPayloadType = m_nPayloadType;
     session.nChannels = m_nChannels;
     session.nBitsPerSample = m_nBitsPerSample;

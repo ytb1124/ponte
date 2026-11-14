@@ -1,4 +1,6 @@
-# AES67eleven — technical notes
+# Ponte — technical notes
+
+Inherited from AES67eleven; names updated for the Ponte fork.
 
 Details behind the [README](README.md): architecture, stream API, monitor and
 player, packaging, conformance.
@@ -12,10 +14,10 @@ Network ─▶ RTP receiver ─jitter buffer─▶ daemon ─▶ [AES67 In] ─l
         Daemon: NMOS IS-04/05 node · IS-12/BCP-008 · IS-13 · web UI
 ```
 
-- **`AES67VSC.driver`** (AudioServerPlugIn, runs inside coreaudiod): **one visible
-  device "AES67eleven"** (64 in / 64 out, 48 kHz, Float32) for apps — output goes to
+- **`Ponte.driver`** (AudioServerPlugIn, runs inside coreaudiod): **one visible
+  device "Ponte"** (64 in / 64 out, 48 kHz, Float32) for apps — output goes to
   the network (TX), input comes from the network (RX). Internally there is an
-  additional **hidden bridge device** (`AES67VSC:Bridge`,
+  additional **hidden bridge device** (`Ponte:Bridge`,
   `kAudioDevicePropertyIsHidden`) the daemon attaches to; both are cross-wired
   through timeline rings and share one zero-timestamp generator (identical sample
   clock). **The device clock is PTP-disciplined**: the daemon measures d(PTP)/d(host)
@@ -23,20 +25,20 @@ Network ─▶ RTP receiver ─jitter buffer─▶ daemon ─▶ [AES67 In] ─l
   (`'ptpS'`) into the driver; the driver's zero timestamps slew towards it
   (±500 ppm clamp, ≤2 ppm per period). No resampling in the audio path — samples run
   1:1 on the media clock. Without daemon/lock: holdover at the last known rate.
-- **`aes67vsc-daemon`** (LaunchAgent, no root): PTP slave (slave-only, BMCA, E2E),
+- **`ponte-daemon`** (LaunchAgent, no root): PTP slave (slave-only, BMCA, E2E),
   RTP TX/RX (L24/L16, 1 ms ptime, ST 2022-7 legs), NMOS node, web UI.
 
 ## Installer package (maintainers)
 
 ```bash
-scripts/package.sh --notarize   # dist/AES67eleven-<version>.pkg, universal (arm64 + x86_64)
+scripts/package.sh --notarize   # dist/Ponte-<version>.pkg, universal (arm64 + x86_64)
 ```
 
 Builds, signs with hardened runtime and wraps everything into a signed installer
 package that sets up the driver, the app and the LaunchAgent. Needs a
 "Developer ID Application" and a "Developer ID Installer" certificate in the
 keychain, and for `--notarize` a notarytool keychain profile named
-`aes67eleven-notary` (`xcrun notarytool store-credentials`). Without the flag
+`ponte-notary` (`xcrun notarytool store-credentials`). Without the flag
 the package is signed but not notarized — fine for your own Macs only.
 
 ## Sending / receiving
@@ -79,7 +81,7 @@ free channel mapping:
   device — the block maps contiguously. Labels edit in place (via IS-13), a
   "Details" view offers transport settings, SDP, the NMOS sender browser and
   manual SDP connect. (The API still accepts arbitrary `channel_map`s.)
-- The daemon runs as **"AES67eleven.app"** (`/Applications`) with a **menu bar
+- The daemon runs as **"Ponte.app"** (`/Applications`) with a **menu bar
   icon**: status line (PTP/TX/RX), "Open web UI", "Quit" (clean stop; launchd only
   restarts after crashes, not after a deliberate quit). Double-clicking in Finder
   starts the app, or opens the web UI when it is already running. The installer

@@ -58,7 +58,7 @@ namespace
         {
             g_pItem.button.title = @"AES67";   //running outside the app bundle
         }
-        g_pItem.button.toolTip = @"AES67eleven - Virtual Soundcard with NMOS support";
+        g_pItem.button.toolTip = @"Ponte - Virtual Soundcard with NMOS support";
 
         NSMenu* menu = [NSMenu new];
         g_pStatusLine = [menu addItemWithTitle:@"starting…" action:nil keyEquivalent:@""];
@@ -67,7 +67,7 @@ namespace
         NSMenuItem* open = [menu addItemWithTitle:@"Open web UI" action:@selector(openUi:) keyEquivalent:@"o"];
         open.target = target;
         [menu addItem:[NSMenuItem separatorItem]];
-        NSMenuItem* quit = [menu addItemWithTitle:@"Quit AES67eleven" action:@selector(quit:) keyEquivalent:@"q"];
+        NSMenuItem* quit = [menu addItemWithTitle:@"Quit Ponte" action:@selector(quit:) keyEquivalent:@"q"];
         quit.target = target;
         g_pItem.menu = menu;
     }

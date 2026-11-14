@@ -11,8 +11,8 @@ namespace
     {
         return json{
             {"device", {
-                {"label", "AES67eleven"},
-                {"description", "AES67eleven - virtual soundcard with NMOS support"}
+                {"label", "Ponte"},
+                {"description", "Ponte - virtual soundcard with NMOS support"}
             }},
             {"network", {
                 {"interface_primary", "en0"},
@@ -85,7 +85,7 @@ namespace
             }},
             {"web", {
                 {"port", 8180},
-                {"webui_path", "/usr/local/share/aes67-vsc/webui"},
+                {"webui_path", "/usr/local/share/ponte/webui"},
                 {"audio_files_path", ""}            //empty = ~/audio-files
             }}
         };

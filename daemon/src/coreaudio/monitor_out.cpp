@@ -15,7 +15,7 @@ bool MonitorOut::Start(const std::string& sDevice, double dGainDb)
 
     //monitoring onto our own devices would howl
     if(sDevice == kDeviceUidMain || sDevice == kDeviceUidBridge ||
-       sDevice == "AES67" || sDevice == "AES67eleven" || sDevice == "AES67 Bridge")
+       sDevice == "AES67" || sDevice == "Ponte" || sDevice == "Ponte Bridge")
     {
         LOG_ERROR("monitor") << "refusing to monitor onto " << sDevice;
         return false;
