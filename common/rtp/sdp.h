@@ -25,8 +25,12 @@ namespace pan::rtp
         double dPacketTimeMs = 1.0;
         std::string sPtpGrandmaster;
         int nPtpDomain = 0;
+        bool bClockDomain = false;  //legacy a=clock-domain line (Dante/RAVENNA style SAP announcements)
     };
 
     std::optional<SdpSession> ParseSdp(const std::string& sSdp);
-    std::string GenerateSdp(const SdpSession& session, const std::string& sOriginIp, const std::vector<std::string>& vSourceIps);
+    /** nSessId/nSessVersion 0 = derive both from the current time (one-off sdp);
+    *   periodic announcements (SAP) pass stable values so receivers see one session **/
+    std::string GenerateSdp(const SdpSession& session, const std::string& sOriginIp, const std::vector<std::string>& vSourceIps,
+                            uint64_t nSessId = 0, uint64_t nSessVersion = 0);
 }

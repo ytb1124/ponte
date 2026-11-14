@@ -70,6 +70,14 @@ namespace
                 {"device", "default"},              //default | device name | device uid
                 {"gain_db", 0.0}
             }},
+            {"sap", {
+                {"enabled", true},                  //RFC 2974 announcements - Dante Controller discovery
+                {"interval_s", 30},
+                {"ttl", 64},
+                {"clock_domain_attr", true},        //a=clock-domain:PTPv2 n (Dante/RAVENNA style sdp)
+                {"listen", true},                   //collect other devices' announcements (receiver connect by sap key)
+                {"timeout_s", 300}                  //drop a discovered session after this much silence
+            }},
             {"nmos", {
                 {"enabled", true},
                 {"http_port", 8080},

@@ -13,7 +13,7 @@ echo "== build =="
 # sign with the local self-signed identity when present: its stable designated
 # requirement keeps the "Local Network" TCC grant across updates. ad-hoc as
 # fallback (grant then dies on every update).
-IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null | grep -o '"AES67 VSC Signing"' | head -1 | tr -d '"')"
+IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null | grep -o '"AES67 VSC Signing"' | head -1 | tr -d '"' || true)"
 SIGN_ID="${IDENTITY:--}"
 echo "signing as: ${SIGN_ID}"
 codesign --force -s "$SIGN_ID" build/AES67VSC.driver

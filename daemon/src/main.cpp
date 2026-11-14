@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <arpa/inet.h>
 #include <ifaddrs.h>
+#include <map>
 #include <mutex>
 #include <netinet/in.h>
 #include <random>
@@ -39,6 +40,7 @@
 #include "ptp/ptpclient.h"
 #include "rtp/rtpreceiver.h"
 #include "rtp/rtpsender.h"
+#include "rtp/sap.h"
 #include "web/server.h"
 
 using namespace pan;
@@ -584,6 +586,48 @@ int main(int argc, char** argv)
         }
     };
 
+    //---- sap: announce every running sender so sap based controllers (Dante
+    //Controller's AES67 flows) discover it. one single-leg sdp per enabled leg,
+    //sent on that leg's interface - ST 2022-7 DUP groups are not announced as such
+    rtp::SapAnnouncer sap;
+    if(Config::Get().GetValue<bool>("sap.enabled", true))
+    {
+        bool bClockDomain = Config::Get().GetValue<bool>("sap.clock_domain_attr", true);
+        sap.Start([&, bClockDomain]()
+        {
+            std::vector<rtp::SapSession> vSessions;
+            //interface ip -> name, so each leg goes out where its source lives
+            std::map<std::string, std::string> mIfByIp;
+            for(const auto& sInterface : Interfaces())
+            {
+                auto sIp = compat::InterfaceIp(sInterface);
+                if(!sIp.empty()) { mIfByIp[sIp] = sInterface; }
+            }
+            std::lock_guard<std::mutex> lg(topologyMutex);
+            for(auto& pSender : vSenders)
+            {
+                if(!pSender->IsRunning()) { continue; }
+                auto session = pSender->DescribeSession();
+                session.bClockDomain = bClockDomain;
+                for(const auto& leg : session.vLegs)
+                {
+                    auto it = mIfByIp.find(leg.sSourceFilter);
+                    if(it == mIfByIp.end()) { continue; }
+                    rtp::SapSession sapSession{it->second, leg.sSourceFilter, session};
+                    sapSession.session.vLegs = {leg};
+                    sapSession.session.vLegs[0].sMid.clear();
+                    vSessions.push_back(std::move(sapSession));
+                }
+            }
+            return vSessions;
+        }, Config::Get().GetValue<int>("sap.interval_s", 30), Config::Get().GetValue<int>("sap.ttl", 64));
+    }
+    rtp::SapListener sapListener;
+    if(Config::Get().GetValue<bool>("sap.listen", true))
+    {
+        sapListener.Start(Interfaces()[0], Config::Get().GetValue<int>("sap.timeout_s", 300));
+    }
+
     //---- web ui ----
     auto sWebRoot = Config::Get().GetValue<std::string>("web.webui_path", "webui");
     web::WebServer web;
@@ -603,6 +647,8 @@ int main(int argc, char** argv)
         }
         js["build"] = std::string(__DATE__ " " __TIME__ " ui-") + std::to_string(nUiStamp);
         js["ptp"] = ptpClient.GetStatusJson();
+        js["sap"] = sap.GetStatusJson();
+        js["sap"]["discovered"] = sapListener.GetStatusJson();
         //stream 0 keeps the existing ui panels alive, the arrays carry them all
         js["sender"] = vSenders.empty() ? json::object() : vSenders[0]->GetStatusJson();
         js["receiver"] = vReceivers.empty() ? json::object() : vReceivers[0]->GetStatusJson();
@@ -816,8 +862,16 @@ int main(int argc, char** argv)
 
         if(sAction == "receiver-connect")
         {
+            //"sap_key" connects to a session found via sap instead of a pasted sdp
+            auto sSdp = jsBody.value("sdp", "");
+            if(auto sKey = jsBody.value("sap_key", ""); !sKey.empty())
+            {
+                auto sdp = sapListener.FindSdp(sKey);
+                if(!sdp) { return {{"error", "unknown sap session"}}; }
+                sSdp = *sdp;
+            }
             json jsPatch = {{"master_enable", true}, {"activation", {{"mode", "activate_immediate"}}},
-                            {"transport_file", {{"type", "application/sdp"}, {"data", jsBody.value("sdp", "")}}}};
+                            {"transport_file", {{"type", "application/sdp"}, {"data", sSdp}}}};
             nmos::HttpJson("PATCH", sBase, &jsPatch, nStatus);
         }
         else if(sAction == "receiver-disconnect")
@@ -1288,6 +1342,8 @@ int main(int argc, char** argv)
     if(captureThread.joinable()) { captureThread.join(); }
     web.Stop();
     node.Stop();
+    sap.Stop();     //sap deletions go out while the streams still exist
+    sapListener.Stop();
     for(auto& pSender : vSenders) { pSender->Stop(); }
     for(auto& pTap : vRxTaps) { pTap->Shutdown(); }     //unblocks stuck playout writes
     for(auto& pReceiver : vReceivers) { pReceiver->Stop(); }

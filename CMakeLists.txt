@@ -40,6 +40,7 @@ add_library(aes67-common STATIC
     common/ptp/ptpclient.cpp
     common/ptp/bmca.cpp
     common/rtp/sdp.cpp
+    common/rtp/sap.cpp
     common/rtp/rtpsender.cpp
     common/rtp/rtpreceiver.cpp
     common/audio/sources.cpp

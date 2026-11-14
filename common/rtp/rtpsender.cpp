@@ -278,6 +278,7 @@ SdpSession RtpSender::DescribeSession() const
     session.nBitsPerSample = m_nBitsPerSample;
     session.dPacketTimeMs = m_nPacketTimeUs / 1000.0;
     session.sPtpGrandmaster = m_ptp.GrandmasterId();
+    session.nPtpDomain = m_ptp.Domain();
     //only enabled legs go into the sdp - receivers must not join a silent group
     size_t nEnabled = 0;
     for(size_t nLeg = 0; nLeg < m_vLegs.size(); nLeg++) { if(m_abLegEnabled[nLeg]) { nEnabled++; } }

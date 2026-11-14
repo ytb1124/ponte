@@ -66,6 +66,7 @@ function connectWs() {
         if (msg.meters && !msg.version) { applyMeters(msg.meters); return; }   //20 Hz fast path
         status = msg;
         render();
+        renderSap();
     };
 }
 
@@ -473,6 +474,31 @@ $("rx-filter").oninput = renderSenders;
 setInterval(() => {
     if ($("page-receiver").classList.contains("active")) loadSenders();
 }, 30000);
+
+/* ---------- sap discovered streams (status.sap.discovered) ---------- */
+let sapShown = "";
+function renderSap() {
+    const list = ((status.sap || {}).discovered || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+    /* the status arrives often - only rebuild when the set of streams changed */
+    const sig = list.map(s => s.key + "|" + s.version).join(",");
+    if (sig === sapShown) return;
+    sapShown = sig;
+    if (!list.length) { $("rx-sap").textContent = "no SAP announcements seen"; return; }
+    $("rx-sap").innerHTML = `<table class="kv">` + list.map((s, i) => {
+        const fmt = (/a=rtpmap:\d+ (L\d+\/\d+(?:\/\d+)?)/.exec(s.sdp) || [])[1] || "";
+        return `<tr><td>${esc(s.name) || "(unnamed)"} <span class="sub">${esc(s.origin)}</span>
+            ${fmt ? `<span class="fmt-chip">${esc(fmt)}</span>` : ""}</td>
+            <td style="text-align:right"><button class="btn" data-sap="${i}">Connect</button></td></tr>`;
+    }).join("") + `</table>`;
+    document.querySelectorAll("#rx-sap [data-sap]").forEach(btn => {
+        btn.onclick = async () => {
+            const s = list[+btn.dataset.sap];
+            const result = await api("/api/action/receiver-connect", "POST", {sap_key: s.key, stream: selRx})
+                .catch(() => ({error: "request failed"}));
+            if (result.error) alert(result.error);
+        };
+    });
+}
 
 /* ---------- receiver controls ---------- */
 $("rx-connect").onclick = () => {

@@ -1,4 +1,5 @@
 #include "sdp.h"
+#include <cctype>
 #include <cstdio>
 #include <sstream>
 
@@ -9,6 +10,19 @@ namespace
     std::string Trim(std::string s)
     {
         while(!s.empty() && (s.back() == '\r' || s.back() == '\n' || s.back() == ' ')) { s.pop_back(); }
+        return s;
+    }
+
+    /** RFC 7273 / AES67 write the EUI-64 as 8 upper case hex pairs joined by
+    *   hyphens (Dante: "00-1D-C1-FF-FE-12-34-56"); internally the id may use
+    *   colons (ui format). Colons also collide with the ":domain" separator. **/
+    std::string RefclkIdentity(std::string s)
+    {
+        for(auto& c : s)
+        {
+            if(c == ':') { c = '-'; }
+            else { c = static_cast<char>(toupper(static_cast<unsigned char>(c))); }
+        }
         return s;
     }
 }
@@ -139,14 +153,21 @@ std::optional<SdpSession> pan::rtp::ParseSdp(const std::string& sSdp)
     return session;
 }
 
-std::string pan::rtp::GenerateSdp(const SdpSession& session, const std::string& sOriginIp, const std::vector<std::string>& vSourceIps)
+std::string pan::rtp::GenerateSdp(const SdpSession& session, const std::string& sOriginIp, const std::vector<std::string>& vSourceIps,
+                                  uint64_t nSessId, uint64_t nSessVersion)
 {
     std::ostringstream sdp;
-    auto nSessId = static_cast<unsigned long>(time(nullptr));
+    auto nNow = static_cast<uint64_t>(time(nullptr));
+    if(nSessId == 0)      { nSessId = nNow; }
+    if(nSessVersion == 0) { nSessVersion = nNow; }
     sdp << "v=0\r\n"
-        << "o=- " << nSessId << " " << nSessId << " IN IP4 " << sOriginIp << "\r\n"
+        << "o=- " << nSessId << " " << nSessVersion << " IN IP4 " << sOriginIp << "\r\n"
         << "s=" << session.sName << "\r\n"
         << "t=0 0\r\n";
+    if(session.bClockDomain)
+    {
+        sdp << "a=clock-domain:PTPv2 " << session.nPtpDomain << "\r\n";
+    }
 
     if(session.vLegs.size() > 1)
     {
@@ -170,7 +191,7 @@ std::string pan::rtp::GenerateSdp(const SdpSession& session, const std::string& 
             << "a=recvonly\r\n";
         if(!session.sPtpGrandmaster.empty())
         {
-            sdp << "a=ts-refclk:ptp=IEEE1588-2008:" << session.sPtpGrandmaster << ":" << session.nPtpDomain << "\r\n";
+            sdp << "a=ts-refclk:ptp=IEEE1588-2008:" << RefclkIdentity(session.sPtpGrandmaster) << ":" << session.nPtpDomain << "\r\n";
         }
         sdp << "a=mediaclk:direct=0\r\n";
         if(session.vLegs.size() > 1)
