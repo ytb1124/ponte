@@ -79,7 +79,9 @@ for Compose.
 ## Limitations
 
 - 48 kHz only, and at most 8 channels per stream.
-- No SAP. Streams are discovered through NMOS or connected by SDP.
+- SAP announce/discovery was added on the `sap-announce` branch. Dante
+  Controller lists the streams, but audio exchange with real Dante hardware is
+  not verified yet. See [SAP_STATUS.md](SAP_STATUS.md) (Korean).
 - Software PTP without hardware timestamping.
 - On macOS the daemon runs only while a user is logged in.
 
