@@ -177,7 +177,7 @@ function render() {
         if (nmos.server_up === false) {
             pill($("set-nmos-pill"), "Port in use", "bad");
             $("set-nmos-status").textContent =
-                `Node API cannot bind port ${(status.config?.nmos || {}).http_port || 8080} — ` +
+                `Node API cannot bind port ${(status.config?.nmos || {}).http_port || 8080}. ` +
                 `another service is using it. Pick a different node API port.`;
         } else if (nmos.status === "registered") {
             pill($("set-nmos-pill"), "Registered", "ok");
@@ -185,12 +185,12 @@ function render() {
         } else if ((nmos.status || "").includes("failed")) {
             pill($("set-nmos-pill"), "Failed", "bad");
             $("set-nmos-status").textContent =
-                "registration failed — registry not reachable at " +
+                "Registration failed. Registry not reachable at " +
                 ((status.config?.nmos || {}).registry_override || "(discovered address)");
         } else {
             pill($("set-nmos-pill"), nmos.status || "searching…", "warn");
             $("set-nmos-status").textContent = nmos.status === "no registry found"
-                ? "no registry found via DNS-SD — enter one manually" : (nmos.status || "starting…");
+                ? "No registry found via DNS-SD. Enter one manually." : (nmos.status || "starting…");
         }
     }
     renderDashStreams(mon);
@@ -199,11 +199,11 @@ function render() {
     const rmon = (mon.receivers || [])[selRx] || mon.receiver || {};
     pill($("rx-overall"), STATE_NAMES[rmon.overall || 0], STATE_CLASS[rmon.overall || 0]);
     const rxLegs = (rx.legs || []).map((leg, i) =>
-        `${i ? "SEC" : "PRI"} ${leg.multicast} (${leg.received} rx · ${leg.lost} lost)`).join(" · ");
+        `${i ? "SEC" : "PRI"} ${leg.multicast} (${leg.received} rx  ${leg.lost} lost)`).join("  ");
     $("rx-mini").textContent = rx.running
-        ? `${rx.receiving ? "receiving" : "no signal"} · ${rx.session_name || ""} · ` +
-          `${rx.played || 0} pkts · ${rx.concealed || 0} concealed` + (rxLegs ? " · " + rxLegs : "") +
-          (rmon.overall_message ? " · " + rmon.overall_message : "")
+        ? `${rx.receiving ? "receiving" : "no signal"}  ${rx.session_name || ""}  ` +
+          `${rx.played || 0} pkts  ${rx.concealed || 0} concealed` + (rxLegs ? "  " + rxLegs : "") +
+          (rmon.overall_message ? "  " + rmon.overall_message : "")
         : "not connected";
 
     /* keep the gain slider in sync with changes made from other browsers,
@@ -225,7 +225,7 @@ function render() {
     $("rx-monitor").textContent = "Monitor: " + (monitorMine ? (lmon.running ? "on" : "starting…")
                                   : (monElsewhere ? `RX ${(monCfg.stream || 0) + 1}` : "off"));
     $("rx-monitor").classList.toggle("primary", monitorMine && !!lmon.running);
-    $("rx-monitor").title = `Listen to RX ${selRx + 1} locally · device: ` + (lmon.device || monCfg.device || "default");
+    $("rx-monitor").title = `Listen to RX ${selRx + 1} locally  device: ` + (lmon.device || monCfg.device || "default");
 
     /* the connected badge in the sender list follows is-05/registry state
        live, e.g. when an external controller patches this receiver */
@@ -240,9 +240,9 @@ function render() {
     pill($("tx-state"), tx.running ? (tx.waiting_for_ptp ? "Waiting for PTP" : "Sending") : "Off",
          tx.running ? (tx.waiting_for_ptp ? "warn" : "ok") : "off");
     const txLegs = (tx.legs || []).map((leg, i) =>
-        `${i ? "SEC" : "PRI"} ${leg.multicast}:${leg.port}` + (leg.enabled === false ? " (RTP off)" : "")).join(" · ");
+        `${i ? "SEC" : "PRI"} ${leg.multicast}:${leg.port}` + (leg.enabled === false ? " (RTP off)" : "")).join("  ");
     $("tx-mini").textContent = tx.running
-        ? `${tx.packets_sent || 0} pkts · avg ${(tx.late_avg_us || 0).toFixed(0)} µs` + (txLegs ? " · " + txLegs : "")
+        ? `${tx.packets_sent || 0} pkts  avg ${(tx.late_avg_us || 0).toFixed(0)} µs` + (txLegs ? "  " + txLegs : "")
         : "stopped";
 
     /* transport fields follow config changes made via nmos/is-05,
@@ -264,7 +264,7 @@ function render() {
     ptpClock = ptp.synced && ptp.time_ms ? {ms: ptp.time_ms, at: performance.now(), utc: ptp.utc_offset ?? 37} : null;
     $("ptp-identity").textContent = ptp.identity || "–";
     $("ptp-active-domain").textContent = (ptp.domain ?? "–") + (ptp.domain_auto ? " (auto)" : "") +
-        ((ptp.domains_seen || []).length > 1 ? " · seen: " + ptp.domains_seen.join(", ") : "");
+        ((ptp.domains_seen || []).length > 1 ? "  seen: " + ptp.domains_seen.join(", ") : "");
     $("ptp-offset").textContent = ptp.synced ? fmtNs(ptp.correction_ns) : "–";
     $("ptp-delay").textContent = fmtNs(ptp.mean_path_delay_ns);
     /* meta bmca: do amber and blue agree on the grandmaster? */
@@ -273,15 +273,15 @@ function render() {
     if (meta) {
         const ok = meta.match === true;
         $("ptp-meta").innerHTML = `Meta BMCA: <span class="pill amber">A</span> ${esc(meta.amber_gm) || "–"}
-            · <span class="pill blue">B</span> ${esc(meta.blue_gm) || "–"}
+             <span class="pill blue">B</span> ${esc(meta.blue_gm) || "–"}
             <span class="pill ${meta.match === null ? "warn" : ok ? "ok" : "bad"}">${
-                meta.match === null ? esc(meta.detail) : ok ? (meta.detail ? "same GM · " + esc(meta.detail) : "match") : "GM MISMATCH"}</span>`;
+                meta.match === null ? esc(meta.detail) : ok ? (meta.detail ? "same GM  " + esc(meta.detail) : "match") : "GM MISMATCH"}</span>`;
     }
 
     const tbody = $("ptp-masters").querySelector("tbody");
     tbody.innerHTML = (ptp.masters || []).map(m =>
         `<tr class="${m.selected ? "selected" : ""}">
-         <td>${m.selected ? '<span class="crown">★ Master</span>' : ""}</td>
+         <td>${m.selected ? '<span class="crown">Leader</span>' : ""}</td>
          <td>${m.port_identity}<br><span class="sub">${m.address}</span></td>
          <td>${m.grandmaster}</td>
          <td>${m.priority1}</td><td>${m.clock_class}</td><td>${m.priority2}</td><td>${m.steps_removed}</td>
@@ -342,8 +342,8 @@ function drawBufferChart(history, criticalMs, live) {
     ctx.fillStyle = "#e74c3c";
     ctx.fillText("critical < " + criticalMs.toFixed(0) + " ms", 6, y(criticalMs) - 5);
     ctx.fillStyle = "#8b93a7";
-    ctx.fillText("now " + last[2].toFixed(1) + " ms · min " + last[0].toFixed(1) + " · max " + last[1].toFixed(1)
-        + " · 30 s window · scale 0–" + top + " ms", 6, 14);
+    ctx.fillText("now " + last[2].toFixed(1) + " ms  min " + last[0].toFixed(1) + "  max " + last[1].toFixed(1)
+        + "  30 s window  scale 0–" + top + " ms", 6, 14);
 }
 
 /* ---------- monitor matrix ---------- */
@@ -357,7 +357,7 @@ setInterval(() => {
     const utc = new Date(tai.getTime() - ptpClock.utc * 1000);
     el.textContent = `${tai.getUTCFullYear()}-${p(tai.getUTCMonth() + 1)}-${p(tai.getUTCDate())} `
         + `${p(tai.getUTCHours())}:${p(tai.getUTCMinutes())}:${p(tai.getUTCSeconds())} TAI`
-        + ` · ${p(utc.getUTCHours())}:${p(utc.getUTCMinutes())}:${p(utc.getUTCSeconds())} UTC (TAI−${ptpClock.utc}s)`;
+        + `  ${p(utc.getUTCHours())}:${p(utc.getUTCMinutes())}:${p(utc.getUTCSeconds())} UTC (TAI−${ptpClock.utc}s)`;
 }, 250);
 
 /* ---------- offset chart ---------- */
@@ -397,7 +397,7 @@ function drawChart(history) {
     const std = Math.sqrt(values.reduce((a, b) => a + (b - mean) * (b - mean), 0) / values.length);
     ctx.fillStyle = "#8b93a7";
     ctx.font = "11px sans-serif";
-    ctx.fillText(`±${fmtNs(max)} · raw σ ${fmtNs(std)} `, 6, 14);
+    ctx.fillText(`±${fmtNs(max)}  raw σ ${fmtNs(std)} `, 6, 14);
 }
 
 /* ---------- nmos sender browser ---------- */
@@ -420,7 +420,7 @@ async function loadSenders() {
     renderSenders();
 }
 
-/* "8 ch · L24 · 48 kHz" from whatever the registry knows about the sender's flow/source */
+/* "8 ch  L24  48 kHz" from whatever the registry knows about the sender's flow/source */
 function senderFormat(s) {
     const parts = [];
     if (s.channels) parts.push(`${s.channels} ch`);
@@ -428,7 +428,7 @@ function senderFormat(s) {
     if (bits) parts.push(`L${bits}`);
     else if (s.media_type) parts.push(s.media_type.replace("audio/", ""));
     if (s.sample_rate) parts.push(`${+(s.sample_rate / 1000).toFixed(1)} kHz`);
-    return parts.join(" · ");
+    return parts.join("  ");
 }
 
 function renderSenders() {
@@ -450,7 +450,7 @@ function renderSenders() {
         const open = !!filter || sndOpen.has(dev);      //an active filter opens everything
         return `<div class="sndgrp">
             <div class="sndhead" data-dev="${esc(dev)}"><span class="arrow">${open ? "▾" : "▸"}</span>
-                ${esc(dev)} <span class="sub">${items.length} sender${connected ? ' · <span class="pill ok">connected</span>' : ""}</span>
+                ${esc(dev)} <span class="sub">${items.length} sender${connected ? '  <span class="pill ok">connected</span>' : ""}</span>
             </div>` +
             (open ? `<table class="kv">` + items.map(i => {
                 const s = sendersCache[i];
@@ -623,7 +623,7 @@ function renderDashStreams(mon) {
                 cls = s.waiting_for_ptp ? "warn" : health;
                 const label = (cfgSenders[s.index] || {}).label;
                 const mc = (s.legs || [])[0] ? s.legs[0].multicast : "";
-                what = (label ? label + " · " : "") + "→ " + mc;
+                what = (label ? label + "  " : "") + mc;
             }
         }
         return `<span class="chip ${cls}" data-go="${type}:${s.index}"><span class="led"></span>` +
@@ -772,7 +772,7 @@ function renderMatrixPage() {
                 const pos = map.indexOf(ch);
                 html += `<td class="mx-cell ${pos >= 0 ? "set" : ""} ${pos >= 0 && s.running ? "live" : ""}"` +
                         ` data-cell="${s.index}:${ch}" data-stream="${s.index}" data-ch="${ch}"` +
-                        ` title="${type} ${s.index + 1} · device channel ${ch + 1}">` +
+                        ` title="${type} ${s.index + 1}  device channel ${ch + 1}">` +
                         `${pos >= 0 ? pos + 1 : ""}</td>`;
             }
             html += "</tr>";
@@ -789,7 +789,7 @@ function renderMatrixPage() {
             if (pos >= 0) { map.splice(pos, 1); }
             else if (map.length >= 8) { alert("Max 8 channels per stream (AES67)"); return; }
             else { map.push(ch); }
-            if (!map.length) { alert("Mindestens 1 Kanal - zum Löschen des Streams ✕ auf dem Dashboard"); return; }
+            if (!map.length) { alert("A stream needs at least one channel"); return; }
             await api("/api/action/stream-map", "POST", {type, index: idx, channel_map: map}).catch(alert);
         });
     };
@@ -907,7 +907,7 @@ async function loadInterfaceOptions() {
         let seen = false;
         for (const f of ifs) {
             if (f.name === current) seen = true;
-            html += `<option value="${f.name}">${f.name}${f.ip ? " · " + f.ip : ""}</option>`;
+            html += `<option value="${f.name}">${f.name}${f.ip ? "  " + f.ip : ""}</option>`;
         }
         if (current && !seen) html += `<option value="${current}">${current} (not present)</option>`;
         el.innerHTML = html;
@@ -979,8 +979,8 @@ function renderPlayers() {
                     <label class="inline"><input type="checkbox" class="pl-loop"> Loop</label>
                     <label class="inline" title="Load and play this file automatically when the service starts"><input type="checkbox" class="pl-auto"> Auto-play</label>
                     <label class="inline">Gain <input class="pl-gain" size="4"> dB</label>
-                    <label class="inline">L → ch <select class="pl-chl">${chOpts}</select></label>
-                    <label class="inline">R → ch <select class="pl-chr">${chOpts}</select></label>
+                    <label class="inline">Left <select class="pl-chl">${chOpts}</select></label>
+                    <label class="inline">Right <select class="pl-chr">${chOpts}</select></label>
                 </div>
                 <div class="pl-progress"><div class="pl-fill"></div></div>
                 <div class="sub pl-time">–</div>
@@ -1117,16 +1117,16 @@ function tileHtml(kind, s) {
                 <div class="bank small t-meters"></div>
             </div>
             <div class="t-actions">
-                <button class="btn t-details" title="Details">⚙</button>
+                <button class="btn t-details" title="Details"><svg class="ic" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></svg></button>
                 ${actions}
-                <button class="btn t-del" title="Remove this ${kind.type}">✕</button>
+                <button class="btn t-del" title="Remove this ${kind.type}"><svg class="ic" viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg></button>
             </div>
         </div>`;
 }
 
 function emptySlotHtml(kind, n) {
     return `<div class="tile ${kind.type} empty" data-add="${kind.type}" title="Add a ${kind.type}">
-        <div class="tile-head"><span class="tnum">${n}.</span><span class="t-empty">+ Add</span></div></div>`;
+        <div class="tile-head"><span class="tnum">${n}.</span><svg class="ic chev" viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3"/></svg></div></div>`;
 }
 
 function wireTiles(kind, host) {
@@ -1162,7 +1162,7 @@ function wireTiles(kind, host) {
                 del.dataset.armed = "1";
                 del.textContent = "Remove?";
                 del.classList.add("danger");
-                setTimeout(() => { del.dataset.armed = "0"; del.textContent = "✕"; del.classList.remove("danger"); }, 4000);
+                setTimeout(() => { del.dataset.armed = "0"; del.innerHTML = '<svg class="ic" viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg>'; del.classList.remove("danger"); }, 4000);
                 return;
             }
             await api("/api/action/stream-remove", "POST", {type: kind.type, index}).catch(alert);
@@ -1185,10 +1185,10 @@ function updateTile(kind, tile, s) {
     setIfIdle(tile.querySelector(".t-start"), (map[0] ?? 0) + 1);
     tile.querySelector(".t-range").textContent = !map.length ? "" :
         (kind.type === "sender" ? "Ponte out " : "Ponte in ") +
-        (isContiguous(map) ? `${map[0] + 1}–${map[map.length - 1] + 1}` : "custom patch");
+        (isContiguous(map) ? `${map[0] + 1}-${map[map.length - 1] + 1}` : "custom patch");
 
     let cls = "off", text, fmt, addr;
-    const legs = (s.legs || []).filter(l => l.multicast).map(l => `${l.multicast}:${l.port}`).join(" · ");
+    const legs = (s.legs || []).filter(l => l.multicast).map(l => `${l.multicast}:${l.port}`).join("  ");
     if (kind.type === "sender") {
         text = s.running ? (s.waiting_for_ptp ? "Waiting for PTP" : "On air") : "Offline";
         cls = s.running ? (s.waiting_for_ptp ? "warn" : "ok") : "off";
@@ -1201,7 +1201,7 @@ function updateTile(kind, tile, s) {
         text = s.receiving ? "Receiving" : (s.running ? "No signal" : "Offline");
         cls = s.receiving ? "ok" : (s.running ? "warn" : "off");
         fmt = s.running ? `L${s.bits || 24} / 48 kHz / ${s.channels || "?"} ch` : "not connected";
-        addr = s.running ? [s.session_name, legs].filter(Boolean).join(" · ") : "";
+        addr = s.running ? [s.session_name, legs].filter(Boolean).join("  ") : "";
         //one primary action at a time - four buttons do not fit a tile
         tile.querySelector(".t-disc").style.display = s.running ? "" : "none";
         tile.querySelector(".t-connect").style.display = s.running ? "none" : "";
@@ -1239,7 +1239,7 @@ function renderStreams() {
     const title = (el, kind, sel) => {
         if (!el) return;
         const label = streamCfg(kind, sel).label;
-        el.textContent = `${kind.tag} ${sel + 1}` + (label ? ` · ${label}` : "");
+        el.textContent = `${kind.tag} ${sel + 1}` + (label ? `  ${label}` : "");
     };
     title($("tx-title"), STREAM_KINDS[0], selTx);
     title($("rx-title"), STREAM_KINDS[1], selRx);
@@ -1259,7 +1259,7 @@ function updateTileMeters(m) {
 document.querySelectorAll("[data-back]").forEach(btn => { btn.onclick = () => showPage("streams"); });
 
 const rangeText = map => !map.length ? "–" :
-    isContiguous(map) ? (map.length === 1 ? `${map[0] + 1}` : `${map[0] + 1}–${map[map.length - 1] + 1}`)
+    isContiguous(map) ? (map.length === 1 ? `${map[0] + 1}` : `${map[0] + 1}-${map[map.length - 1] + 1}`)
                       : map.map(c => c + 1).join(",");
 const streamAddr = s => (s.legs || []).filter(l => l.multicast).map(l => `${l.multicast}:${l.port}`)[0] || "";
 
@@ -1279,19 +1279,19 @@ function renderClock() {
     if (!host || !host.offsetParent) return;
     const gm = masters.find(m => m.selected);
     let html = `<div class="tile clock small">
-        <div class="tile-head"><span class="tname">PTP · domain ${ptp.domain ?? "–"}</span></div>
+        <div class="tile-head"><span class="tname">PTP domain ${ptp.domain ?? "–"}</span></div>
         <div class="tile-body">
             <div class="t-state ${cls}">${ptp.synced ? "Locked" : (masters.length ? "Syncing" : "No master")}</div>
             <div class="t-line" title="Grandmaster">${esc(gm ? gm.grandmaster : "no grandmaster")}</div>
-            <div class="t-line dim">corr ${ptp.synced ? fmtNs(ptp.correction_ns) : "–"} · delay ${fmtNs(ptp.mean_path_delay_ns)}</div>
-            <div class="t-line dim">slave-only · 48 kHz</div>
+            <div class="t-line dim">Corr ${ptp.synced ? fmtNs(ptp.correction_ns) : "–"}  Delay ${fmtNs(ptp.mean_path_delay_ns)}</div>
+            <div class="t-line dim">Slave only, 48 kHz</div>
         </div></div>`;
     html += masters.map((m, i) => `<div class="tile clock small">
         <div class="tile-head"><span class="tnum">${i + 1}.</span><span class="tname" title="${esc(m.grandmaster)}">${esc(m.grandmaster)}</span></div>
         <div class="tile-body">
             <div class="t-state ${m.selected ? "ok" : "off"}">${m.selected ? "Leader" : "Candidate"}</div>
             <div class="t-line dim">${esc(m.address)}</div>
-            <div class="t-line dim">P1 ${m.priority1} · class ${m.clock_class} · steps ${m.steps_removed}</div>
+            <div class="t-line dim">P1 ${m.priority1}  Class ${m.clock_class}  Steps ${m.steps_removed}</div>
         </div></div>`).join("");
     if (host.dataset.html !== html) { host.dataset.html = html; host.innerHTML = html; }
 }
@@ -1351,10 +1351,10 @@ function renderPatch(force) {
         const label = streamCfg(kind, s.index).label;
         const on = input ? s.receiving : s.running;
         return `<div class="pv-card ${input ? "rx" : "tx"}" data-jump="${s.index}" title="Jump to ${kind.tag} ${s.index + 1}">
-            <div class="h">${kind.tag} ${s.index + 1}${label ? " · " + esc(label) : ""}</div>
+            <div class="h">${kind.tag} ${s.index + 1}${label ? " " + esc(label) : ""}</div>
             <div class="s ${on ? "ok" : ""}">${on ? "ONLINE" : "OFFLINE"}</div>
             <div class="f">${(s.channel_map || []).length} ch</div></div>`;
-    }).join("") || `<span class="pv-empty">No ${kind.type}s yet. Add one in Setup → System Inventory.</span>`;
+    }).join("") || `<span class="pv-empty">No ${kind.type}s. Add one on the Setup page.</span>`;
 
     if (!list.length) {
         grid.innerHTML = `<div class="patch-none">No ${kind.type}s to patch yet.</div>`;
@@ -1373,7 +1373,7 @@ function renderPatch(force) {
         const span = Math.max(1, map.length);
         h1 += `<th class="sname gstart" colspan="${span}" data-s="${s.index}"><span class="tagc">${kind.tag} ${s.index + 1}</span>${esc(label)}</th>`;
         h2 += `<th class="saddr gstart" colspan="${span}" title="${esc(addr)}">${esc(addr)}</th>`;
-        h3 += `<th class="sfmt gstart" colspan="${span}">L${s.bits || 24} · ${map.length} ch · ${(input ? s.receiving : s.running) ? "online" : "offline"}</th>`;
+        h3 += `<th class="sfmt gstart" colspan="${span}">L${s.bits || 24}  ${map.length}ch  ${(input ? s.receiving : s.running) ? "Online" : "Offline"}</th>`;
         h4 += map.map((_, j) => `<th class="${j ? "" : "gstart"}">${j + 1}</th>`).join("") || `<th class="gstart">–</th>`;
     }
     let body = "";
@@ -1385,7 +1385,7 @@ function renderPatch(force) {
             const on = input ? s.running : s.running;
             body += map.map((dev, j) => `<td class="pc ${j ? "" : "gstart"} ${dev === ch ? "set" + (on ? " live" : "") : ""}"
                 data-s="${s.index}" data-j="${j}" data-ch="${ch}"
-                title="${kind.tag} ${s.index + 1} ch ${j + 1} ↔ Ponte ${input ? "In" : "Out"} ${ch + 1}"></td>`).join("")
+                title="${kind.tag} ${s.index + 1} ch ${j + 1} to Ponte ${input ? "In" : "Out"} ${ch + 1}"></td>`).join("")
                 || `<td class="pc gstart"></td>`;
         }
         body += "</tr>";
@@ -1393,7 +1393,7 @@ function renderPatch(force) {
     const scroll = [grid.scrollLeft, grid.scrollTop];
     grid.innerHTML = `<table class="pgrid ${input ? "input" : "output"}"><thead>
         <tr><th class="corner" rowspan="4" colspan="2"><div class="ct">${input ? "Input" : "Output"}</div>
-            <div class="cs">Ponte ${input ? "In" : "Out"} ${first + 1}–${first + rowsN}</div></th>${h1}</tr>
+            <div class="cs">Ponte ${input ? "In" : "Out"} ${first + 1}-${first + rowsN}</div></th>${h1}</tr>
         <tr>${h2}</tr><tr>${h3}</tr><tr>${h4}</tr></thead><tbody>${body}</tbody></table>`;
     [grid.scrollLeft, grid.scrollTop] = scroll;
 

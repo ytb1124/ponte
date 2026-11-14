@@ -20,14 +20,18 @@
     --warn: #ffb020;
     --bad: #ff3b30;
     --off: #6d6d72;
-    --font: "Montserrat", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; }
 body {
     background: var(--bg);
     color: var(--text);
-    font: 600 13px/1.4 var(--font);
+    font: 500 13px/1.35 var(--font);
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.005em;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -74,7 +78,7 @@ body {
 .tab.active { background: var(--cyan); color: #04202b; }
 .navclock {
     height: 38px; display: flex; align-items: center; padding: 0 12px;
-    background: #000; border-radius: 6px; font: 700 12px ui-monospace, Menlo, monospace;
+    background: #000; border-radius: 6px; font: 500 12px var(--mono);
     letter-spacing: .5px; font-variant-numeric: tabular-nums;
 }
 
@@ -119,7 +123,7 @@ input:focus, select:focus, textarea:focus { outline: 1px solid var(--cyan); bord
 input[type=range] { padding: 0; accent-color: var(--cyan); }
 input[type=checkbox] { accent-color: var(--cyan); }
 input[type=file] { background: transparent; border: 0; padding: 0; }
-textarea { width: 100%; resize: vertical; font: 12px ui-monospace, Menlo, monospace; }
+textarea { width: 100%; resize: vertical; font: 12px var(--mono); }
 canvas { width: 100%; display: block; }
 
 .btn {
@@ -151,10 +155,10 @@ canvas { width: 100%; display: block; }
 .pill.blue { background: var(--blue); }
 
 /* hover hints */
-.hint { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px;
-        border-radius: 50%; border: 1px solid var(--off); color: var(--dim); font: 700 10px/1 Georgia, serif;
+.hint { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px;
+        border-radius: 50%; border: 1px solid #555; color: #888; font: 600 9px/1 var(--font);
         cursor: help; position: relative; flex: none; text-transform: none; letter-spacing: 0; vertical-align: 1px; }
-.hint::before { content: "i"; }
+.hint::before { content: "?"; }
 .hint:hover { border-color: var(--cyan); color: var(--cyan); }
 .hint:hover::after {
     content: attr(data-tip); position: absolute; left: -6px; top: calc(100% + 7px);
@@ -184,7 +188,7 @@ canvas { width: 100%; display: block; }
 .masters .crown { color: var(--cyan); }
 .ptp-chart { height: 64px; margin: 8px 0 2px; background: var(--box); border: 1px solid var(--line2); border-radius: 4px; }
 .sdp { background: var(--box); border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px;
-       font: 12px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-all; user-select: text; }
+       font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-all; user-select: text; }
 .switch { position: relative; display: inline-block; width: 42px; height: 22px; }
 .switch input { display: none; }
 .switch span { position: absolute; inset: 0; background: var(--off); border-radius: 999px; transition: background 150ms; }
@@ -330,9 +334,9 @@ canvas { width: 100%; display: block; }
 /* empty slot: number + dropdown arrow, click adds a stream */
 .tile.empty { border-color: #8e8e93; cursor: pointer; }
 .tile.empty .tile-head { background: transparent; color: var(--text); }
-.tile.empty .t-empty { margin-left: auto; color: var(--dim); font-weight: 700; }
 .tile.empty:hover { border-color: var(--hc); }
-.tile.empty:hover .t-empty { color: var(--hc); }
+.tile.empty .chev { margin-left: auto; width: 12px; height: 12px; }
+.tile.empty:hover .chev { stroke: var(--hc); }
 .tile.small { min-height: 0; }
 .tile.small .tile-body { padding-bottom: 6px; }
 
@@ -428,3 +432,12 @@ table.pgrid { border-collapse: separate; border-spacing: 0; font-size: 11px; }
     .patch-body { height: auto; }
     .patch-scroll { max-height: 70vh; }
 }
+
+/* line icons (gear, close, chevrons) */
+.ic { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.6;
+      stroke-linecap: round; stroke-linejoin: round; vertical-align: -2px; flex: none; }
+.t-actions .btn .ic { width: 12px; height: 12px; }
+.sbtn.back { display: inline-flex; align-items: center; gap: 4px; padding-left: 8px; }
+.tile .tag { letter-spacing: .3px; }
+.inv-h { letter-spacing: -0.01em; }
+.panel-title, .patch-title, .detail-title, .card h2, .sysf label { letter-spacing: -0.01em; }

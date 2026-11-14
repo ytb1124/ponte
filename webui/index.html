@@ -11,7 +11,7 @@
 <body>
 <nav id="nav">
     <div class="brand"><img src="logo.svg" alt=""><span class="dot" id="conn-dot"></span>Ponte</div>
-    <div class="navstat" id="nav-stat" title="PTP clock state · device sample rate">
+    <div class="navstat" id="nav-stat" title="PTP clock state, device sample rate">
         <span class="ns-ptp" id="nav-ptp">PTP</span><span class="ns-rate">48kHz</span>
     </div>
     <div class="tabs">
@@ -30,7 +30,7 @@
         <div class="card">
             <h2>PTP <span class="pill" id="d-ptp-state">–</span></h2>
             <div class="big" id="d-ptp-gm">–</div>
-            <div class="sub">Grandmaster · correction <span id="d-ptp-offset">–</span></div>
+            <div class="sub">Grandmaster, correction <span id="d-ptp-offset">–</span></div>
         </div>
         <div class="card">
             <h2>NMOS <span class="pill" id="d-nmos-state">–</span></h2>
@@ -46,11 +46,11 @@
             <div id="d-streams"></div>
         </div>
         <div class="card wide">
-            <h2>Receiver <span class="hint" data-tip="Network → apps: what arrives on device channels 1–64"></span></h2>
+            <h2>Receiver <span class="hint" data-tip="Audio arriving from the network on Ponte channels 1-64"></span></h2>
             <div id="bank-in" class="bank"></div>
         </div>
         <div class="card wide">
-            <h2>Transmitter <span class="hint" data-tip="Apps → network: what apps play onto device channels 1–64"></span></h2>
+            <h2>Transmitter <span class="hint" data-tip="Audio apps play onto Ponte channels 1-64"></span></h2>
             <div id="bank-out" class="bank"></div>
         </div>
     </div>
@@ -77,11 +77,11 @@
             <div class="patch-head">
                 <div>
                     <div class="patch-title" id="patch-title">Input</div>
-                    <div class="patch-subtitle" id="patch-subtitle">From network stream to Ponte channel</div>
+                    <div class="patch-subtitle" id="patch-subtitle">Stream channel to Ponte input</div>
                 </div>
-                <div class="patch-legend"><span class="cell-demo set"></span> patched
-                    <span class="cell-demo live"></span> patched &amp; running
-                    <span class="hint" data-tip="Click a cell to send that stream channel to that Ponte channel. A stream channel always goes to exactly one Ponte channel; clicking moves it."></span></div>
+                <div class="patch-legend"><span class="cell-demo set"></span>Patched
+                    <span class="cell-demo live"></span>Active
+                    <span class="hint" data-tip="Click a cell to route that stream channel to that Ponte channel."></span></div>
             </div>
             <div class="patch-scroll" id="patch-grid"></div>
         </div>
@@ -112,16 +112,16 @@
             <div class="panel subpage active" id="sub-inventory">
                 <div class="inventory">
                     <div class="inv-col c-tx">
-                        <h3 class="inv-h blue">Senders <span>Ponte → Network</span></h3>
+                        <h3 class="inv-h blue" title="Ponte to network">Senders</h3>
                         <div id="st-tx" class="slots"></div>
                     </div>
                     <div class="inv-col c-rx">
-                        <h3 class="inv-h green">Receivers <span>Network → Ponte</span></h3>
+                        <h3 class="inv-h green" title="Network to Ponte">Receivers</h3>
                         <div id="st-rx" class="slots"></div>
                     </div>
                     <div class="inv-col c-sap">
-                        <h3 class="inv-h orange">Network <span>SAP</span>
-                            <span class="hint" data-tip="Streams announced via SAP: Dante AES67 flows, RAVENNA, other AES67 devices and Ponte itself. Connect puts one on a free receiver."></span></h3>
+                        <h3 class="inv-h orange">Network
+                            <span class="hint" data-tip="Streams announced with SAP. Connect puts the stream on a free receiver."></span></h3>
                         <div id="inv-sap" class="slots one"></div>
                     </div>
                     <div class="inv-col c-clk">
@@ -154,7 +154,7 @@
                     <div class="card">
                         <h2>NMOS <span class="pill" id="set-nmos-pill">–</span></h2>
                         <table class="kv">
-                            <tr><td>Registry <span class="hint" data-tip="Leave the host empty for automatic discovery (unicast DNS-SD). Example: http · registrar1.office.int · 8010"></span></td><td>
+                            <tr><td>Registry <span class="hint" data-tip="Leave the host empty for automatic discovery (unicast DNS-SD). Example: http, registrar1.office.int, 8010"></span></td><td>
                                 <select id="set-reg-scheme"><option value="http">http</option><option value="https">https</option></select>
                                 <input id="set-reg-host" size="15" placeholder="registrar1.office.int">
                                 <input id="set-reg-port" size="5" placeholder="8010">
@@ -170,7 +170,7 @@
                             <label class="inline">Domain <input type="number" id="ptp-domain" min="0" max="127" style="width:5.5em"></label>
                         </h2>
                         <div class="big small" id="ptp-time">–</div>
-                        <div class="sub">Own identity: <span id="ptp-identity">–</span> · domain <span id="ptp-active-domain">–</span> · correction <span id="ptp-offset">–</span> · path delay <span id="ptp-delay">–</span></div>
+                        <div class="sub">Identity <span id="ptp-identity">–</span> &nbsp; Domain <span id="ptp-active-domain">–</span> &nbsp; Correction <span id="ptp-offset">–</span> &nbsp; Path delay <span id="ptp-delay">–</span></div>
                         <div class="sub" id="ptp-meta" style="display:none"></div>
                         <canvas id="ptp-chart" height="64" class="ptp-chart" title="Correction history around the mean - dots: raw measurements (timestamp noise), line: servo"></canvas>
                         <table class="masters" id="ptp-masters">
@@ -188,7 +188,7 @@
 
 <!-- ================= RECEIVER (detail) ================= -->
 <section id="page-receiver" class="page">
-    <div class="detail-bar"><button class="sbtn" data-back>← Setup</button><span class="detail-title" id="rx-title"></span></div>
+    <div class="detail-bar"><button class="sbtn back" data-back><svg class="ic" viewBox="0 0 12 12"><path d="M7.5 2L3.5 6l4 4"/></svg>Setup</button><span class="detail-title" id="rx-title"></span></div>
     <div class="grid">
         <div class="card wide">
             <h2>Status <span class="pill" id="rx-overall">–</span>
@@ -209,7 +209,7 @@
         </div>
         <div class="card wide">
             <h2>Manual (SDP) <span class="hint" data-tip="Fallback without NMOS or SAP: paste the sender's SDP (a=group:DUP supported)"></span></h2>
-            <textarea id="rx-sdp" placeholder="Paste SDP here (a=group:DUP supported)…" rows="4"></textarea>
+            <textarea id="rx-sdp" placeholder="Paste SDP" rows="4"></textarea>
             <div class="row">
                 <button class="btn primary" id="rx-connect">Connect</button>
                 <button class="btn" id="rx-disconnect">Disconnect</button>
@@ -223,7 +223,7 @@
 
 <!-- ================= SENDER (detail) ================= -->
 <section id="page-sender" class="page">
-    <div class="detail-bar"><button class="sbtn" data-back>← Setup</button><span class="detail-title" id="tx-title"></span></div>
+    <div class="detail-bar"><button class="sbtn back" data-back><svg class="ic" viewBox="0 0 12 12"><path d="M7.5 2L3.5 6l4 4"/></svg>Setup</button><span class="detail-title" id="tx-title"></span></div>
     <div class="grid">
         <div class="card wide">
             <h2>Status <span class="pill" id="tx-state">–</span>
