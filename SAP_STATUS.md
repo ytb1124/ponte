@@ -7,13 +7,11 @@ discovery. The goal is that SAP-based tools such as Dante Controller can find
 Ponte's streams. This page separates what was actually verified from what was
 not.
 
-All tests below were run before the rename to Ponte, under the AES67eleven
-name. After the rename, only the unit tests and the installer build were
-re-checked.
-
-> **Summary:** Behaviour on a single Mac and Dante Controller listing the
-> stream are verified. **Audio exchange with real Dante hardware has never
-> been tested.**
+> **Summary:** Receiving audio from real Dante hardware works. A Shure ULXD4D
+> in AES67 mode was the PTP grandmaster, Ponte found its stream through SAP,
+> and a DAW recorded the microphone from the Ponte device. **Sending audio
+> from the Mac to a Dante device has not been tested yet**, because the
+> device used has no receive channels.
 
 ## Legend
 
@@ -25,12 +23,26 @@ re-checked.
 
 ## Test setup
 
-- macOS 15.8.1, one Mac (no external AES67 or Dante hardware)
+**Single-Mac tests (sections 1 and 2), 2026-11-14 to 2026-11-15**, run under
+the AES67eleven name before the rename to Ponte:
+
+- macOS 15.8.1, one Mac, no external AES67 or Dante hardware
 - Network: USB gigabit Ethernet adapter (`en7`)
-- PTP grandmaster: [`tools/ptp_test_gm.py`](tools/ptp_test_gm.py) instead of
-  real hardware (software timestamps, test use only)
-- Dante Controller running on the same Mac
-- Test dates: 2026-11-14 to 2026-11-15
+- PTP grandmaster: [`tools/ptp_test_gm.py`](tools/ptp_test_gm.py) (software
+  timestamps, test use only)
+
+**Dante hardware tests (section 3), 2026-11-16 to 2026-11-17**, with Ponte
+0.1.1 installed from the release package:
+
+- Same Mac and USB adapter (`en7`), link-local addresses (169.254.x.x),
+  direct cable, no switch
+- Dante Controller on the same Mac
+- Devices tried:
+
+| Device | Dante platform | AES67 | Result |
+|---|---|---|---|
+| PreSonus AVB-D16 (Dante port) | Audinate DCM, router 4.0.1 | Not supported (no AES67 Config tab, PTPv1 only) | Cannot work with Ponte |
+| Shure ULXD4D | Audinate DCM, router 4.2 | Supported, enabled | Used for the tests below |
 
 ## 1. Unit tests: ✅ verified
 
@@ -62,25 +74,25 @@ other devices.
 |---|---|---|
 | Build and install (`scripts/install.sh`) | ✅ | Fixed the script stopping silently when no signing certificate exists |
 | Daemon sends SAP announcements on the real Ethernet port | ✅ | The first send failed before the macOS "Local Network" permission was granted; it worked once allowed. Failed sends retry after 1 s |
-| PTP lock to the test grandmaster | ✅ | With `ptp_test_gm.py` only. Not checked against real PTP hardware |
+| PTP lock to the test grandmaster | ✅ | With `ptp_test_gm.py` |
 | Sender (2-channel test tone, `239.69.145.10`) | ✅ | |
 | The receiver discovers the node's own SAP announcement | ✅ | Shown in the web UI **SAP streams** card |
 | Connecting a receiver to a SAP-discovered stream (raw SDP / `sap_key` / web UI Connect button) | ✅ | All three methods reached status Healthy |
 | Received audio | ✅ | Both channels at -18.0 dB (the tone level sent), 0 lost and 0 concealed packets |
-| Long-run stability | ❌ | Only ran for a few minutes |
 
 ## 3. Dante compatibility
 
 | Item | Status | Notes |
 |---|---|---|
-| Dante Controller lists the stream | ✅ | "AES67eleven SAP test" shown as a 2-channel transmitter |
-| Dante Controller sees a PTP leader clock | ❌ | No Dante device; it showed the leader clock as unknown |
-| Ponte locks to a Dante device as PTP grandmaster | ❌ | Ponte is slave-only and cannot be the clock leader, so this is the first thing to check |
-| Audio from Mac → Dante device | ❌ | No Dante hardware |
-| Audio from Dante device → Mac | ❌ | No Dante hardware |
-| Ponte parses SAP announcements sent by a Dante device | ❌ | The format follows the RFC, but no real Dante packet was ever tested |
+| Dante Controller lists Ponte's stream | ✅ | "Ponte AES67 Out ch 1 2 3 4 5 6 7 8" shown as a transmitter next to the Shure device |
+| Ponte locks to a Dante device as PTP grandmaster | ✅ | Locked to the ULXD4D (`00:0e:dd:ff:fe:f0:04:66`, domain 0) over PTPv2. Offset stayed between -489 µs and +9 µs (software timestamps) |
+| Ponte parses SAP announcements sent by a Dante device | ✅ | "ULXD4D-f00466 : 32", 2 ch L24/48000, 1 ms, `239.69.69.131`, with `a=ts-refclk` and `a=mediaclk` |
+| Audio from Dante device → Mac | ✅ | Connected with `sap_key`. Speech arrived at -24 to -40 dB and a DAW recorded it from the Ponte input |
+| 10-minute stability, Dante device → Mac | 🟡 | 598,561 packets, 0 lost, 0 concealed, PTP stayed locked. The microphone was mostly off, so this checks packets and clock, not audible clicks. The device read counter showed 19 underruns since daemon start; whether they happened during this run was not separated |
+| Audio from Mac → Dante device | ❌ | The ULXD4D has no Dante receive channels. Needs a device that can receive |
 | The stream disappears from Dante Controller when stopped | ❌ | Deletion sending is only covered by the unit test |
-| Long-run clock drift (dropouts, ticks) | ❌ | |
+| Longer runs (30 to 60 minutes and more) | ❌ | |
+| Devices without AES67 support | ✅ (as expected) | The AVB-D16 sends only PTPv1 and no SAP, so Ponte cannot lock or see streams. This is a device limit, not a Ponte bug |
 
 ## 4. Not tested at all
 
@@ -91,16 +103,18 @@ other devices.
 - Transfer between two Macs, and networks with a managed switch (IGMP snooping)
 - Docker / Linux build
 
-## 5. Next test steps (once Dante hardware is available)
+## 5. Next test steps
 
-1. Turn on AES67 mode on the Dante device and reboot it.
-2. Check in the web UI that Ponte locks to the Dante device's PTP clock.
-3. In Dante Controller, route the Ponte stream to Dante receive channels and
-   listen.
-4. Create an AES67 multicast flow on the Dante device and receive it with
-   **Connect** in Ponte's **SAP streams** card.
-5. Run for 30 to 60 minutes and watch lost/concealed packet counts and the
-   audio.
+1. With a Dante device that has receive channels and AES67 enabled, route
+   Ponte's stream to it in Dante Controller and listen.
+2. Stop a Ponte sender and check that it leaves Dante Controller's list.
+3. Run 30 to 60 minutes with continuous audio, listen for clicks, and track
+   the device underrun counter as a difference over the run.
+4. Repeat through a managed switch with IGMP snooping.
 
-Note: in practice Dante AES67 flows are planned as 8 channels per flow. Send
-more channels as several flows.
+Notes:
+
+- Dante Controller shows an **AES67 Config** tab only on devices that
+  support AES67. Turn AES67 mode on there and reboot the device.
+- In practice Dante AES67 flows are planned as 8 channels per flow. Send more
+  channels as several flows.

@@ -14,10 +14,11 @@ PTP and NMOS work comes from AES67eleven.
 **[Download for macOS](https://github.com/ytb1124/ponte/releases/latest)** ·
 [Verification status](SAP_STATUS.md) ([한국어](SAP_STATUS.ko.md))
 
-> **Status:** Dante Controller lists Ponte's streams, and send/receive works
-> between Ponte instances on one Mac. Audio exchange with **real Dante
-> hardware has not been tested yet**. See [SAP_STATUS.md](SAP_STATUS.md) for
-> exactly what was and was not verified.
+> **Status:** Receiving from real Dante hardware works: Ponte locked to a
+> Shure ULXD4D in AES67 mode, found its stream through SAP, and a DAW recorded
+> it. **Sending from the Mac to a Dante device has not been tested yet.** The
+> Dante device must support AES67 and have it turned on. See
+> [SAP_STATUS.md](SAP_STATUS.md) for exactly what was and was not verified.
 
 ## Features
 
@@ -105,7 +106,9 @@ python3 tools/ptp_test_gm.py <your-ethernet-ip>
 - 48 kHz only, and at most 8 channels per stream. Dante's AES67 flows are
   also handled as 8 channels per flow in practice, so send more channels as
   several streams.
-- Not verified with real Dante hardware yet ([details](SAP_STATUS.md)).
+- Works only with Dante devices that support AES67 and have AES67 mode
+  turned on. Many older Dante devices do not support it. Sending to a Dante
+  device is not verified yet ([details](SAP_STATUS.md)).
 - Slave-only software PTP without hardware timestamping.
 - The daemon runs only while a user is logged in.
 - The Linux / Docker gateway from AES67eleven is still in the tree but was not
