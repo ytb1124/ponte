@@ -52,7 +52,7 @@ macOS blocks it the first time. Install it one of these two ways.
 **B. Terminal**
 
 ```bash
-sudo installer -pkg ~/Downloads/Ponte-0.1.0.pkg -target /
+sudo installer -pkg ~/Downloads/Ponte-0.1.2.pkg -target /
 ```
 
 After installing:
@@ -68,6 +68,20 @@ network (for example a Dante device in AES67 mode); Ponte cannot be the clock
 leader itself.
 
 If AES67eleven is installed too, uninstall it first: both use web port 8180.
+
+**Ponte does not start after login.** Ponte runs as a background item. If
+it was switched off under **System Settings → General → Login Items &
+Extensions → Allow in the Background**, macOS will not start it at login.
+Turn **Ponte** back on there, open `/Applications/Ponte.app` (0.1.2 and
+later turn it back on for you), or run:
+
+```bash
+launchctl enable gui/$(id -u)/io.github.ytb1124.ponte.daemon
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.github.ytb1124.ponte.daemon.plist
+```
+
+Quitting Ponte from the menu bar stops it until the next login. To start it
+again right away, open `/Applications/Ponte.app`.
 
 To uninstall:
 

@@ -23,5 +23,11 @@ chown "$CONSOLE_USER" "$PLIST"
 chmod 644 "$PLIST"
 
 launchctl bootout "gui/${CONSOLE_UID}/io.github.ytb1124.ponte.daemon" 2>/dev/null
-launchctl bootstrap "gui/${CONSOLE_UID}" "$PLIST"
+# a disabled agent (for example switched off under Login Items) is never
+# loaded at login and bootstrap fails with error 5; installing means the
+# user wants it running, so clear that flag first
+launchctl enable "gui/${CONSOLE_UID}/io.github.ytb1124.ponte.daemon"
+if ! launchctl bootstrap "gui/${CONSOLE_UID}" "$PLIST"; then
+    echo "could not start the Ponte agent - check System Settings > General > Login Items"
+fi
 exit 0

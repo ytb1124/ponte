@@ -233,7 +233,11 @@ int main(int argc, char** argv)
             //LaunchServices-started process never gets its status item scene
             //granted (appkit retries forever, no icon). hand over to launchd -
             //the agent context works - then open the ui and bow out.
-            (void)!system("launchctl bootstrap gui/$(id -u) \"$HOME/Library/LaunchAgents/io.github.ytb1124.ponte.daemon.plist\" 2>/dev/null;"
+            //opening the app means the user wants it running, so also clear
+            //a disabled flag (Login Items switched off) that would make the
+            //bootstrap fail silently
+            (void)!system("launchctl enable gui/$(id -u)/io.github.ytb1124.ponte.daemon;"
+                          " launchctl bootstrap gui/$(id -u) \"$HOME/Library/LaunchAgents/io.github.ytb1124.ponte.daemon.plist\" 2>/dev/null;"
                           " launchctl kickstart gui/$(id -u)/io.github.ytb1124.ponte.daemon");
             (void)!system("(sleep 2; open http://localhost:8180) >/dev/null 2>&1 &");
             return 0;

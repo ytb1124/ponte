@@ -71,6 +71,8 @@ sed "s|__HOME__|$HOME|g" launchd/io.github.ytb1124.ponte.daemon.plist \
 launchctl bootout "gui/$(id -u)/io.github.ytb1124.ponte.daemon" 2>/dev/null || true
 # wait for the old instance to fully exit - bootstrap races it otherwise
 for i in $(seq 1 15); do pgrep -f ponte-daemon >/dev/null || break; sleep 1; done
+# a disabled agent (Login Items switched off) would fail to load with error 5
+launchctl enable "gui/$(id -u)/io.github.ytb1124.ponte.daemon"
 launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/io.github.ytb1124.ponte.daemon.plist"
 
 sleep 2
